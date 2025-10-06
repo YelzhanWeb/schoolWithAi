@@ -1,0 +1,6 @@
+[
+  {"id": 1, "name": "Python Start", "category": "Программирование", "level": "Начальный"},
+  {"id": 2, "name": "Go Advanced", "category": "Программирование", "level": "Продвинутый"},
+  {"id": 3, "name": "Canva Design", "category": "Дизайн", "level": "Средний"},
+  {"id": 4, "name": "Lego Robots", "category": "Робототехника", "level": "Начальный"}
+]
