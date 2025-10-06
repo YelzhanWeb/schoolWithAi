@@ -1,0 +1,82 @@
+[
+    {
+        "user_id": 1,
+        "course_id": 1,
+        "score": 86
+    },
+    {
+        "user_id": 1,
+        "course_id": 2,
+        "score": 91
+    },
+    {
+        "user_id": 1,
+        "course_id": 3,
+        "score": 73
+    },
+    {
+        "user_id": 1,
+        "course_id": 4,
+        "score": 67
+    },
+    {
+        "user_id": 2,
+        "course_id": 1,
+        "score": 78
+    },
+    {
+        "user_id": 2,
+        "course_id": 2,
+        "score": 59
+    },
+    {
+        "user_id": 2,
+        "course_id": 3,
+        "score": 94
+    },
+    {
+        "user_id": 2,
+        "course_id": 4,
+        "score": 81
+    },
+    {
+        "user_id": 3,
+        "course_id": 1,
+        "score": 52
+    },
+    {
+        "user_id": 3,
+        "course_id": 2,
+        "score": 88
+    },
+    {
+        "user_id": 3,
+        "course_id": 3,
+        "score": 75
+    },
+    {
+        "user_id": 3,
+        "course_id": 4,
+        "score": 69
+    },
+    {
+        "user_id": 4,
+        "course_id": 1,
+        "score": 99
+    },
+    {
+        "user_id": 4,
+        "course_id": 2,
+        "score": 91
+    },
+    {
+        "user_id": 4,
+        "course_id": 3,
+        "score": 84
+    },
+    {
+        "user_id": 4,
+        "course_id": 4,
+        "score": 77
+    }
+]
