@@ -38,7 +38,7 @@ func main() {
 	}
 
 	body, _ := json.Marshal(user)
-	resp, err := http.Post("http://localhost:8000/recommend", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post("http://localhost:8000/recommend?limit=10", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		panic(err)
 	}

@@ -18,9 +18,9 @@ def load_json(path):
 
 
 def analyze_performance(
-    user_file="/home/aibolat/schoolWithAi/go_recommender/data/users.json",
-    grades_file="/home/aibolat/schoolWithAi/go_recommender/data/grades.json",
-    courses_file="/home/aibolat/schoolWithAi/go_recommender/data/courses.json"
+    user_file="/home/luka/schoolWithAi/go_recommender/data/users.json",
+    grades_file="/home/luka/schoolWithAi/go_recommender/data/grades.json",
+    courses_file="/home/luka/schoolWithAi/go_recommender/data/courses.json"
 ):
     # 1️⃣ Загрузка данных
     users = load_json(user_file)
