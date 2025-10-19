@@ -3,6 +3,7 @@ package services
 import (
 	"backend/internal/domain/models"
 	"backend/internal/ports/repositories"
+	"backend/pkg/jwt"
 	"context"
 	"errors"
 	"time"
@@ -13,15 +14,15 @@ import (
 // AuthService handles authentication business logic
 // Это USE CASE - чистая бизнес-логика
 type AuthService struct {
-	userRepo  repositories.UserRepository
-	jwtSecret string
+	userRepo   repositories.UserRepository
+	jwtManager *jwt.JWTManager
 }
 
 // NewAuthService creates a new auth service
-func NewAuthService(userRepo repositories.UserRepository, jwtSecret string) *AuthService {
+func NewAuthService(userRepo repositories.UserRepository, jwtManager *jwt.JWTManager) *AuthService {
 	return &AuthService{
-		userRepo:  userRepo,
-		jwtSecret: jwtSecret,
+		userRepo:   userRepo,
+		jwtManager: jwtManager,
 	}
 }
 
@@ -192,7 +193,5 @@ func (s *AuthService) verifyPassword(hash, password string) bool {
 }
 
 func (s *AuthService) generateToken(user *models.User) (string, error) {
-	// TODO: Implement JWT token generation
-	// This is a placeholder
-	return "jwt-token-placeholder", nil
+	return s.jwtManager.Generate(user.ID, user.Email, string(user.Role))
 }

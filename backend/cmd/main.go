@@ -1,6 +1,11 @@
 package main
 
 import (
+	"backend/internal/adapters/http"
+	postgre "backend/internal/adapters/postgres"
+	"backend/internal/domain/services"
+	"backend/pkg/jwt"
+	"backend/pkg/ml_client"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -38,24 +43,35 @@ func main() {
 		return
 	}
 
-	// Initialize adapters (repositories)
-	// userRepo := postgre.NewUserRepository(db)
-	// courseRepo := postgres.NewCourseRepository(db)
-	// recommendationRepo := postgres.NewRecommendationRepository(db)
+	userRepo := postgre.NewUserRepository(db)
+	courseRepo := postgre.NewCourseRepository(db)
+	recommendationRepo := postgre.NewRecommendationRepository(db) // ← НОВОЕ
 
-	// Initialize domain services (use cases)
-	// authService := services.NewAuthService(userRepo, cfg.JWTSecret)
-	// courseService := services.NewCourseService(courseRepo)
-	// recommendationService := services.NewRecommendationService(recommendationRepo, mlClient)
+	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
+	mlServiceURL := getEnv("ML_SERVICE_URL", "http://localhost:5000")
+	mlClient := ml_client.NewMLClient(mlServiceURL) // ← НОВОЕ
 
-	// Initialize HTTP handlers (controllers)
-	// httpServer := http.NewServer(authService, courseService, recommendationService)
+	authService := services.NewAuthService(userRepo, jwtManager)
+	courseService := services.NewCourseService(courseRepo)
+	recommendationService := services.NewRecommendationService(recommendationRepo, mlClient) // ← НОВОЕ
+
+	httpServer := http.NewServer(
+		authService,
+		courseService,
+		recommendationService,
+		cfg.JWTSecret,
+		mlServiceURL,
+	)
 
 	log.Println("🚀 Starting Education Platform API...")
-	log.Printf("📊 Server will run on port %s", cfg.ServerPort)
+	log.Printf("📊 Server running on http://localhost:%s", cfg.ServerPort)
 
-	// TODO: Start HTTP server
-	// go httpServer.Start(cfg.ServerPort)
+	// Start HTTP server in goroutine
+	go func() {
+		if err := httpServer.Start(cfg.ServerPort); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -63,13 +79,6 @@ func main() {
 	<-quit
 
 	log.Println("🛑 Shutting down server...")
-
-	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// defer cancel()
-
-	// TODO: Shutdown HTTP server gracefully
-	// httpServer.Shutdown(ctx)
-
 	log.Println("✅ Server stopped gracefully")
 }
 
