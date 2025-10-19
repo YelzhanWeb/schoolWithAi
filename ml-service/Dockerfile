@@ -5,7 +5,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Копируем зависимости
-COPY requirements.txt .
+COPY requirements.txt /home/luka/schoolWithAi/ml-service
 
 # Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt

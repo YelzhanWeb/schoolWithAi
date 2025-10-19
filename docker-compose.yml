@@ -1,89 +1,41 @@
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: education_db
-    restart: unless-stopped
+  # === PostgreSQL Database ===
+  db:
+    image: postgres:15
+    container_name: school_db
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: education_platform
-      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # pgAdmin (optional - for DB management)
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: education_pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@education.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - db_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - school_net
+  # === ML Service ===
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: ml_service
+    restart: always
+    env_file:
+      - /home/luka/schoolWithAi/ml-service/.env
     depends_on:
-      - postgres
-
-  # Go Backend (uncomment when ready)
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: education_backend
-  #   restart: unless-stopped
-  #   environment:
-  #     DB_HOST: postgres
-  #     DB_PORT: 5432
-  #     DB_USER: postgres
-  #     DB_PASSWORD: postgres
-  #     DB_NAME: education_platform
-  #     DB_SSLMODE: disable
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./backend:/app
-  #   command: go run cmd/main.go
-
-  # Python ML Service (uncomment when ready)
-  # ml-service:
-  #   build:
-  #     context: ./ml-service
-  #     dockerfile: Dockerfile
-  #   container_name: education_ml
-  #   restart: unless-stopped
-  #   environment:
-  #     DB_HOST: postgres
-  #     DB_PORT: 5432
-  #     DB_USER: postgres
-  #     DB_PASSWORD: postgres
-  #     DB_NAME: education_platform
-  #   ports:
-  #     - "5000:5000"
-  #   depends_on:
-  #     - postgres
-  #   volumes:
-  #     - ./ml-service:/app
+      - db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ml-service:/app
+    networks:
+      - school_net
 
 volumes:
-  postgres_data:
-    driver: local
-  pgadmin_data:
-    driver: local
+  db_data:
 
 networks:
-  default:
-    name: education_network
+  school_net:
+    driver: bridge
