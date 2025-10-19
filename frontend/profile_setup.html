@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройка профиля - EduPlatform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+            <h1 class="text-3xl font-bold text-indigo-600 mb-6">🎓 Настройка профиля</h1>
+            <p class="text-gray-600 mb-8">Расскажи о себе, чтобы мы могли подобрать для тебя лучшие материалы</p>
+
+            <form id="profileForm">
+                <!-- Класс -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">Класс</label>
+                    <select id="grade" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Выбери класс</option>
+                        <option value="1">1 класс</option>
+                        <option value="2">2 класс</option>
+                        <option value="3">3 класс</option>
+                        <option value="4">4 класс</option>
+                        <option value="5">5 класс</option>
+                        <option value="6">6 класс</option>
+                        <option value="7">7 класс</option>
+                        <option value="8">8 класс</option>
+                        <option value="9">9 класс</option>
+                        <option value="10">10 класс</option>
+                        <option value="11">11 класс</option>
+                    </select>
+                </div>
+
+                <!-- Возрастная группа -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">Возрастная группа</label>
+                    <select id="ageGroup" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Выбери группу</option>
+                        <option value="junior">Младшие классы (1-4)</option>
+                        <option value="middle">Средние классы (5-8)</option>
+                        <option value="senior">Старшие классы (9-11)</option>
+                    </select>
+                </div>
+
+                <!-- Интересы -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">Интересы (выбери несколько)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="math" class="interest-checkbox">
+                            <span>Математика</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="physics" class="interest-checkbox">
+                            <span>Физика</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="chemistry" class="interest-checkbox">
+                            <span>Химия</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="biology" class="interest-checkbox">
+                            <span>Биология</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="literature" class="interest-checkbox">
+                            <span>Литература</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="history" class="interest-checkbox">
+                            <span>История</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="programming" class="interest-checkbox">
+                            <span>Программирование</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="art" class="interest-checkbox">
+                            <span>Искусство</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Стиль обучения -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">Стиль обучения</label>
+                    <select id="learningStyle" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Как тебе удобнее учиться?</option>
+                        <option value="visual">Визуальный (видео, картинки)</option>
+                        <option value="auditory">Аудиальный (лекции, подкасты)</option>
+                        <option value="kinesthetic">Кинестетический (практика, эксперименты)</option>
+                        <option value="mixed">Смешанный</option>
+                    </select>
+                </div>
+
+                <!-- Предпочитаемые типы материалов -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">Предпочитаемые типы материалов</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="video" class="resource-type-checkbox">
+                            <span>🎥 Видео</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="reading" class="resource-type-checkbox">
+                            <span>📖 Чтение</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="exercise" class="resource-type-checkbox">
+                            <span>✍️ Упражнения</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="quiz" class="resource-type-checkbox">
+                            <span>📝 Тесты</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" value="interactive" class="resource-type-checkbox">
+                            <span>🎮 Интерактив</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="errorMessage" class="hidden mb-4 p-3 bg-red-100 text-red-700 rounded-lg"></div>
+
+                <button type="submit"
+                    class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                    Сохранить профиль
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Protect page
+        if (!protectStudentPage()) {
+            throw new Error('Unauthorized');
+        }
+
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const grade = parseInt(document.getElementById('grade').value);
+            const ageGroup = document.getElementById('ageGroup').value;
+            const learningStyle = document.getElementById('learningStyle').value;
+
+            // Get selected interests
+            const interests = Array.from(document.querySelectorAll('.interest-checkbox:checked'))
+                .map(cb => cb.value);
+
+            // Get preferred resource types
+            const resourceTypes = Array.from(document.querySelectorAll('.resource-type-checkbox:checked'))
+                .map(cb => cb.value);
+
+            if (interests.length === 0) {
+                document.getElementById('errorMessage').textContent = 'Выбери хотя бы один интерес';
+                document.getElementById('errorMessage').classList.remove('hidden');
+                return;
+            }
+
+            const profileData = {
+                grade,
+                age_group: ageGroup,
+                interests,
+                learning_style: learningStyle,
+                preferences: {
+                    preferred_resource_types: resourceTypes,
+                    difficulty_preference: grade <= 4 ? 'easy' : grade <= 8 ? 'medium' : 'hard'
+                }
+            };
+
+            try {
+                await API.profile.create(profileData);
+                window.location.href = '/dashboard.html';
+            } catch (error) {
+                const errorMsg = error.response?.data?.error || 'Ошибка сохранения профиля';
+                document.getElementById('errorMessage').textContent = errorMsg;
+                document.getElementById('errorMessage').classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>

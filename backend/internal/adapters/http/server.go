@@ -13,7 +13,9 @@ type Server struct {
 	router                *gin.Engine
 	authService           *services.AuthService
 	courseService         *services.CourseService
-	recommendationService *services.RecommendationService // ← НОВОЕ
+	recommendationService *services.RecommendationService
+	progressService       *services.ProgressService // НОВОЕ
+	profileService        *services.ProfileService  // НОВОЕ
 	jwtManager            *jwt.JWTManager
 	mlServiceURL          string
 }
@@ -22,6 +24,8 @@ func NewServer(
 	authService *services.AuthService,
 	courseService *services.CourseService,
 	recommendationService *services.RecommendationService,
+	progressService *services.ProgressService, // НОВОЕ
+	profileService *services.ProfileService, // НОВОЕ
 	jwtSecret string,
 	mlServiceURL string,
 ) *Server {
@@ -31,8 +35,10 @@ func NewServer(
 	s := &Server{
 		router:                router,
 		authService:           authService,
-		courseService:         courseService, // ← НОВОЕ
+		courseService:         courseService,
 		recommendationService: recommendationService,
+		progressService:       progressService, // НОВОЕ
+		profileService:        profileService,  // НОВОЕ
 		jwtManager:            jwt.NewJWTManager(jwtSecret),
 		mlServiceURL:          mlServiceURL,
 	}
@@ -47,10 +53,9 @@ func (s *Server) setupRoutes() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	// API группа
 	api := s.router.Group("/api")
 	{
-		// Auth endpoints (без middleware)
+		// Auth (public)
 		authHandler := handlers.NewAuthHandler(s.authService)
 		auth := api.Group("/auth")
 		{
@@ -59,21 +64,33 @@ func (s *Server) setupRoutes() {
 			auth.GET("/me", middleware.AuthMiddleware(s.jwtManager), authHandler.Me)
 		}
 
-		// Recommendations (protected)
-		recHandler := handlers.NewRecommendationHandler(s.recommendationService)
-
-		protected := api.Group("")
-		protected.Use(middleware.AuthMiddleware(s.jwtManager))
-		{
-			protected.GET("/recommendations", recHandler.GetRecommendations)
-			protected.POST("/recommendations/refresh", recHandler.RefreshRecommendations)
-		}
-
+		// Courses (public)
 		courseHandler := handlers.NewCourseHandler(s.courseService)
 		api.GET("/courses", courseHandler.GetAllCourses)
 		api.GET("/courses/:id", courseHandler.GetCourse)
 		api.GET("/modules/:id/resources", courseHandler.GetModuleResources)
 
+		// Protected routes
+		protected := api.Group("")
+		protected.Use(middleware.AuthMiddleware(s.jwtManager))
+		{
+			// Recommendations
+			recHandler := handlers.NewRecommendationHandler(s.recommendationService)
+			protected.GET("/recommendations", recHandler.GetRecommendations)
+			protected.POST("/recommendations/refresh", recHandler.RefreshRecommendations)
+
+			// Progress (НОВОЕ)
+			progressHandler := handlers.NewProgressHandler(s.progressService)
+			protected.POST("/progress", progressHandler.UpdateProgress)
+			protected.GET("/progress", progressHandler.GetMyProgress)
+			protected.GET("/progress/statistics", progressHandler.GetMyStatistics)
+
+			// Profile (НОВОЕ)
+			profileHandler := handlers.NewProfileHandler(s.profileService)
+			protected.POST("/profile", profileHandler.CreateProfile)
+			protected.GET("/profile", profileHandler.GetMyProfile)
+			protected.PUT("/profile", profileHandler.UpdateMyProfile)
+		}
 	}
 }
 

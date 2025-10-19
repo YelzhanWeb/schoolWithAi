@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд - EduPlatform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-indigo-600">🎓 EduPlatform</h1>
+                <div class="flex items-center space-x-6">
+                    <a href="/dashboard.html" class="text-indigo-600 font-semibold">Главная</a>
+                    <a href="/recommendations.html" class="text-gray-600 hover:text-indigo-600">Рекомендации</a>
+                    <a href="/profile-setup.html" class="text-gray-600 hover:text-indigo-600">Профиль</a>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-gray-700" id="userName">Загрузка...</span>
+                        <button onclick="logout()" class="text-red-600 hover:text-red-700">Выйти</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Welcome Section -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Добро пожаловать! 👋</h2>
+            <p class="text-gray-600">Продолжай обучение и достигай новых целей</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div id="statistics" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- Will be loaded by JS -->
+        </div>
+
+        <!-- Top Recommendations -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800">📚 Рекомендации для тебя</h3>
+                <a href="/recommendations.html" class="text-indigo-600 hover:text-indigo-700 font-semibold">
+                    Все рекомендации →
+                </a>
+            </div>
+            <div id="topRecommendations">
+                <!-- Will be loaded by JS -->
+            </div>
+        </div>
+
+        <!-- Recent Progress -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">📊 Твой прогресс</h3>
+            <div id="recentProgress">
+                <!-- Will be loaded by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Initialize
+        initAuth();
+
+        // Load dashboard data
+        async function loadDashboard() {
+            await Promise.all([
+                loadStatistics(),
+                loadTopRecommendations(),
+                loadRecentProgress()
+            ]);
+        }
+
+        // Load statistics
+        async function loadStatistics() {
+            try {
+                const response = await API.progress.getStatistics();
+                const stats = response.data;
+
+                const statsHTML = `
+                    <div class="bg-indigo-50 rounded-lg p-6">
+                        <div class="text-indigo-600 text-sm font-semibold mb-2">УРОВЕНЬ</div>
+                        <div class="text-3xl font-bold text-indigo-700">${stats.level || 1}</div>
+                        <div class="text-sm text-gray-600 mt-1">${stats.total_points || 0} очков</div>
+                    </div>
+
+                    <div class="bg-green-50 rounded-lg p-6">
+                        <div class="text-green-600 text-sm font-semibold mb-2">ЗАВЕРШЕНО</div>
+                        <div class="text-3xl font-bold text-green-700">${stats.completed_count || 0}</div>
+                        <div class="text-sm text-gray-600 mt-1">из ${stats.total_resources || 0} уроков</div>
+                    </div>
+
+                    <div class="bg-yellow-50 rounded-lg p-6">
+                        <div class="text-yellow-600 text-sm font-semibold mb-2">СРЕДНИЙ БАЛЛ</div>
+                        <div class="text-3xl font-bold text-yellow-700">${Math.round(stats.average_score || 0)}%</div>
+                        <div class="text-sm text-gray-600 mt-1">успеваемость</div>
+                    </div>
+
+                    <div class="bg-blue-50 rounded-lg p-6">
+                        <div class="text-blue-600 text-sm font-semibold mb-2">ВРЕМЯ ОБУЧЕНИЯ</div>
+                        <div class="text-3xl font-bold text-blue-700">${formatTime(stats.total_time_spent || 0)}</div>
+                        <div class="text-sm text-gray-600 mt-1">всего времени</div>
+                    </div>
+                `;
+
+                document.getElementById('statistics').innerHTML = statsHTML;
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        // Load top recommendations
+        async function loadTopRecommendations() {
+            showLoading('topRecommendations');
+
+            try {
+                const response = await API.recommendations.get();
+                const recommendations = response.data.recommendations || response.data;
+
+                if (!recommendations || recommendations.length === 0) {
+                    document.getElementById('topRecommendations').innerHTML = `
+                        <p class="text-gray-500 text-center py-4">Пока нет рекомендаций</p>
+                    `;
+                    return;
+                }
+
+                const topRecs = recommendations.slice(0, 5);
+                const recsHTML = topRecs.map((rec, index) => `
+                    <div class="border-b last:border-b-0 py-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="text-2xl">${index + 1}</span>
+                                    <h4 class="font-semibold text-gray-800">${rec.title}</h4>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-2">${rec.reason}</p>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded">
+                                        Score: ${(rec.score * 100).toFixed(0)}%
+                                    </span>
+                                    <span class="text-xs text-gray-500">${rec.algorithm}</span>
+                                </div>
+                            </div>
+                            <a href="/lesson.html?id=${rec.resource_id}" 
+                               class="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                                Начать
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('topRecommendations').innerHTML = recsHTML;
+            } catch (error) {
+                showError('topRecommendations', 'Ошибка загрузки рекомендаций');
+            }
+        }
+
+        // Load recent progress
+        async function loadRecentProgress() {
+            showLoading('recentProgress');
+
+            try {
+                const response = await API.progress.get();
+                const progress = response.data.progress || response.data;
+
+                if (!progress || progress.length === 0) {
+                    document.getElementById('recentProgress').innerHTML = `
+                        <p class="text-gray-500 text-center py-4">Начни своё первое обучение!</p>
+                    `;
+                    return;
+                }
+
+                const recentProgress = progress.slice(0, 5);
+                const progressHTML = recentProgress.map(p => `
+                    <div class="border-b last:border-b-0 py-3 flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-800">Resource ID: ${p.resource_id}</div>
+                            <div class="text-sm text-gray-600">
+                                Статус: <span class="font-semibold">${p.status}</span> 
+                                | Балл: ${p.score}%
+                                | Время: ${formatTime(p.time_spent)}
+                            </div>
+                        </div>
+                        ${p.status === 'completed' ?
+                        '<span class="text-green-600 font-semibold">✓ Завершено</span>' :
+                        '<span class="text-yellow-600 font-semibold">⏳ В процессе</span>'}
+                    </div>
+                `).join('');
+
+                document.getElementById('recentProgress').innerHTML = progressHTML;
+            } catch (error) {
+                showError('recentProgress', 'Ошибка загрузки прогресса');
+            }
+        }
+
+        // Load on page ready
+        loadDashboard();
+    </script>
+</body>
+
+</html>

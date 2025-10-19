@@ -1,13 +1,3 @@
--- ========================================
--- MIGRATION DOWN: Rollback Initial Schema
--- Version: 000001
--- ========================================
-
--- Drop tables in reverse order (respecting foreign keys)
-
--- Gamification
-DROP TABLE IF EXISTS leaderboard CASCADE;
-
 DROP TABLE IF EXISTS student_points CASCADE;
 
 DROP TABLE IF EXISTS student_achievements CASCADE;
@@ -26,27 +16,22 @@ DROP TABLE IF EXISTS student_interactions CASCADE;
 
 DROP TABLE IF EXISTS resource_ratings CASCADE;
 
--- Progress & Answers
 DROP TABLE IF EXISTS student_progress CASCADE;
 
 DROP TABLE IF EXISTS student_answers CASCADE;
 
 DROP TABLE IF EXISTS questions CASCADE;
 
--- Content
 DROP TABLE IF EXISTS resources CASCADE;
 
 DROP TABLE IF EXISTS modules CASCADE;
 
 DROP TABLE IF EXISTS courses CASCADE;
 
--- Profiles
 DROP TABLE IF EXISTS student_profiles CASCADE;
 
--- Users
 DROP TABLE IF EXISTS users CASCADE;
 
--- Drop ENUMs
 DROP TYPE IF EXISTS interaction_type;
 
 DROP TYPE IF EXISTS progress_status;

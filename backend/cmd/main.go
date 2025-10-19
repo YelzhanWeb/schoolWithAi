@@ -21,14 +21,11 @@ import (
 )
 
 func main() {
-	// Command line flags
 	migrateFlag := flag.String("migrate", "", "Run migrations: up or down")
 	flag.Parse()
 
-	// Load configuration
 	cfg := loadConfig()
 
-	// Connect to database
 	db, err := connectDB(cfg)
 	if err != nil {
 		log.Fatalf("❌ Failed to connect to database: %v", err)
@@ -37,28 +34,37 @@ func main() {
 
 	log.Println("✅ Database connection established")
 
-	// Handle migrations
 	if *migrateFlag != "" {
 		handleMigrations(db, *migrateFlag)
 		return
 	}
 
+	// Repositories
 	userRepo := postgre.NewUserRepository(db)
 	courseRepo := postgre.NewCourseRepository(db)
-	recommendationRepo := postgre.NewRecommendationRepository(db) // ← НОВОЕ
+	recommendationRepo := postgre.NewRecommendationRepository(db)
+	progressRepo := postgre.NewProgressRepository(db)      // НОВОЕ
+	profileRepo := postgre.NewStudentProfileRepository(db) // НОВОЕ
 
+	// JWT & ML Client
 	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
 	mlServiceURL := getEnv("ML_SERVICE_URL", "http://localhost:5000")
-	mlClient := ml_client.NewMLClient(mlServiceURL) // ← НОВОЕ
+	mlClient := ml_client.NewMLClient(mlServiceURL)
 
+	// Services
 	authService := services.NewAuthService(userRepo, jwtManager)
 	courseService := services.NewCourseService(courseRepo)
-	recommendationService := services.NewRecommendationService(recommendationRepo, mlClient) // ← НОВОЕ
+	recommendationService := services.NewRecommendationService(recommendationRepo, mlClient)
+	progressService := services.NewProgressService(progressRepo) // НОВОЕ
+	profileService := services.NewProfileService(profileRepo)    // НОВОЕ
 
+	// HTTP Server
 	httpServer := http.NewServer(
 		authService,
 		courseService,
 		recommendationService,
+		progressService, // НОВОЕ
+		profileService,  // НОВОЕ
 		cfg.JWTSecret,
 		mlServiceURL,
 	)
@@ -66,14 +72,12 @@ func main() {
 	log.Println("🚀 Starting Education Platform API...")
 	log.Printf("📊 Server running on http://localhost:%s", cfg.ServerPort)
 
-	// Start HTTP server in goroutine
 	go func() {
 		if err := httpServer.Start(cfg.ServerPort); err != nil {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
 
-	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -82,7 +86,6 @@ func main() {
 	log.Println("✅ Server stopped gracefully")
 }
 
-// Config holds application configuration
 type Config struct {
 	DBHost     string
 	DBPort     int
@@ -118,7 +121,6 @@ func connectDB(cfg Config) (*sql.DB, error) {
 		return nil, err
 	}
 
-	// Test connection
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}
@@ -126,7 +128,6 @@ func connectDB(cfg Config) (*sql.DB, error) {
 	return db, nil
 }
 
-// backend/cmd/main.go - исправить handleMigrations
 func handleMigrations(db *sql.DB, command string) {
 	migrationsPath := "./migrations"
 
@@ -158,7 +159,6 @@ func handleMigrations(db *sql.DB, command string) {
 	}
 }
 
-// Helper functions
 func getEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {
