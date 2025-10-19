@@ -5,13 +5,6 @@
 -- ========================================
 
 -- ENUMS
--- ========================================
--- MIGRATION: Initial Schema
--- Version: 000001
--- Description: Create all tables for education platform with ML recommendation system
--- ========================================
-
--- ENUMS
 CREATE TYPE user_role AS ENUM ('student', 'teacher', 'admin');
 
 CREATE TYPE resource_type AS ENUM ('exercise', 'quiz', 'reading', 'video', 'interactive');

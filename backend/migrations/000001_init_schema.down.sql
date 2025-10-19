@@ -14,11 +14,6 @@ DROP TABLE IF EXISTS student_achievements CASCADE;
 
 DROP TABLE IF EXISTS achievements CASCADE;
 
--- Recommendation System
-DROP TABLE IF EXISTS student_embeddings CASCADE;
-
-DROP TABLE IF EXISTS resource_embeddings CASCADE;
-
 DROP TABLE IF EXISTS recommendations CASCADE;
 
 DROP TABLE IF EXISTS student_skills CASCADE;

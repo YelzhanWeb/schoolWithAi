@@ -90,12 +90,17 @@ class CollaborativeFiltering:
         # Найти похожих пользователей
         similar_users = self.find_similar_users(student_id, top_n=10)
         
+        # ДОБАВЛЕНО: Проверка на пустой список
         if not similar_users:
+            print(f"⚠️  No similar users found for student {student_id}")
             return []
         
         similar_user_ids = [uid for uid, _ in similar_users]
         
-        # ИСПРАВЛЕНО: Используем IN вместо ANY
+        # УЛУЧШЕНО: Добавлена проверка перед запросом
+        if not similar_user_ids:
+            return []
+        
         query = """
             SELECT 
                 rr.resource_id,
@@ -118,7 +123,6 @@ class CollaborativeFiltering:
             LIMIT %s
         """
         
-        # ИСПРАВЛЕНО: Передаем tuple вместо списка
         recommendations = self.db.execute(
             query, 
             (tuple(similar_user_ids), student_id, top_n)
