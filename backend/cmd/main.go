@@ -9,6 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 )
 
@@ -114,10 +117,36 @@ func connectDB(cfg Config) (*sql.DB, error) {
 	return db, nil
 }
 
+// backend/cmd/main.go - исправить handleMigrations
 func handleMigrations(db *sql.DB, command string) {
-	// TODO: Implement migration logic using golang-migrate
-	log.Printf("Migration command: %s", command)
-	log.Println("⚠️  Migration functionality not yet implemented")
+	migrationsPath := "./migrations"
+
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		log.Fatalf("Failed to create driver: %v", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		fmt.Sprintf("file://%s", migrationsPath),
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		log.Fatalf("Failed to create migrate: %v", err)
+	}
+
+	switch command {
+	case "up":
+		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+			log.Fatalf("Migration up failed: %v", err)
+		}
+		log.Println("✅ Migrations completed")
+	case "down":
+		if err := m.Steps(-1); err != nil {
+			log.Fatalf("Migration down failed: %v", err)
+		}
+		log.Println("✅ Rollback completed")
+	}
 }
 
 // Helper functions

@@ -1,20 +1,19 @@
-# Используем официальный Python
 FROM python:3.10-slim
 
-# Устанавливаем рабочую директорию
+# Рабочая директория
 WORKDIR /app
 
-# Копируем зависимости
-COPY requirements.txt /home/luka/schoolWithAi/ml-service
+# Копируем requirements.txt
+COPY requirements.txt .
 
 # Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем всё приложение
+# Копируем приложение
 COPY app ./app
 
-# Указываем порт
-EXPOSE 8000
+# Порт
+EXPOSE 5000
 
-# Запуск FastAPI через Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Запуск
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000"]
