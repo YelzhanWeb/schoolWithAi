@@ -1,0 +1,20 @@
+first, we start docker-compose.yml file with command:
+docker-compose up -d postgres
+
+second, we run migrations for our db with commands:
+cd backend/
+go run cmd/main.go -migrate up
+OUTPUT:
+(.venv) luka@luka:~/schoolWithAi/backend$ go run cmd/main.go -migrate up
+2025/10/20 21:46:36 ✅ Database connection established
+2025/10/20 21:46:36 ✅ Migrations completed
+
+third, we start our app with commands:
+cd backend/
+go run cmd/main.go
+
+fourth, we start ml-service with commands:
+cd ml-service/
+uvicorn app.main:app --reload --host 0.0.0.0 --port 5000
+
+fifth, we start go live server and we have to open index.html
