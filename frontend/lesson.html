@@ -120,23 +120,21 @@
         // Load lesson
         async function loadLesson() {
             try {
-                // Fetch resource details - нужно будет добавить endpoint в backend
-                // Пока используем mock data
-                const lesson = {
-                    id: resourceId,
-                    title: 'Урок загружается...',
-                    content: 'Содержание урока будет здесь...',
-                    resource_type: 'reading',
-                    difficulty: 3,
-                    estimated_time: 15
-                };
+                // Вот исправление:
+                // Мы загружаем данные с бэкенда, а не используем заглушку
+                const response = await API.resources.getById(resourceId);
+                const lesson = response.data.resource; // Убедись, что ключ 'resource'
+
+                if (!lesson) {
+                    throw new Error('Lesson data is empty');
+                }
 
                 // Display lesson
                 document.getElementById('lessonTitle').textContent = lesson.title;
                 document.getElementById('lessonType').textContent = getResourceTypeIcon(lesson.resource_type) + ' ' + lesson.resource_type;
                 document.getElementById('lessonDifficulty').innerHTML = getDifficultyBadge(lesson.difficulty);
                 document.getElementById('lessonTime').textContent = `⏱️ ${lesson.estimated_time} мин`;
-                document.getElementById('content').innerHTML = `<p>${lesson.content}</p>`;
+                document.getElementById('content').innerHTML = `<p>${lesson.content}</p>`; // Для Markdown здесь понадобится библиотека
 
                 // Generate rating stars
                 generateStars();
@@ -153,7 +151,6 @@
                 window.location.href = './dashboard.html';
             }
         }
-
         // Generate rating stars
         function generateStars() {
             let html = '';
