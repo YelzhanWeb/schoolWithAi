@@ -27,4 +27,7 @@ type CourseRepository interface {
 
 	// GetByTeacher возвращает курсы учителя
 	GetByTeacher(ctx context.Context, teacherID int64) ([]*models.Course, error)
+
+	// backend/internal/ports/repositories/course_repository.go
+	GetResourceByID(ctx context.Context, id int64) (*models.Resource, error)
 }

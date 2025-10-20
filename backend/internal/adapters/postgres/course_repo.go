@@ -190,3 +190,39 @@ func (r *courseRepository) GetByTeacher(ctx context.Context, teacherID int64) ([
 	// TODO: Implement
 	return nil, nil
 }
+
+// backend/internal/adapters/postgres/course_repo.go
+func (r *courseRepository) GetResourceByID(ctx context.Context, id int64) (*models.Resource, error) {
+	query := `
+		SELECT 
+			id, module_id, title, content, resource_type, 
+			difficulty, estimated_time, file_url, thumbnail_url,
+			created_at, updated_at
+		FROM resources
+		WHERE id = $1
+	`
+
+	resource := &models.Resource{}
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&resource.ID,
+		&resource.ModuleID,
+		&resource.Title,
+		&resource.Content,
+		&resource.ResourceType,
+		&resource.Difficulty,
+		&resource.EstimatedTime,
+		&resource.FileURL,
+		&resource.ThumbnailURL,
+		&resource.CreatedAt,
+		&resource.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("resource not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get resource: %w", err)
+	}
+
+	return resource, nil
+}

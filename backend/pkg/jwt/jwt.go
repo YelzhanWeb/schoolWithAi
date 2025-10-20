@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -39,6 +40,9 @@ func (m *JWTManager) Generate(userID int64, email, role string) (string, error) 
 
 func (m *JWTManager) Verify(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return []byte(m.secretKey), nil
 	})
 
@@ -49,6 +53,11 @@ func (m *JWTManager) Verify(tokenString string) (*Claims, error) {
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
 		return nil, errors.New("invalid token")
+	}
+
+	// ДОБАВИТЬ ПРОВЕРКУ СРОКА ДЕЙСТВИЯ:
+	if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, errors.New("token expired")
 	}
 
 	return claims, nil

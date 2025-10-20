@@ -58,3 +58,8 @@ func (s *CourseService) GetModuleResources(ctx context.Context, moduleID int64) 
 
 	return resources, nil
 }
+
+// backend/internal/domain/services/course_service.go
+func (s *CourseService) GetResourceByID(ctx context.Context, resourceID int64) (*models.Resource, error) {
+	return s.courseRepo.GetResourceByID(ctx, resourceID)
+}

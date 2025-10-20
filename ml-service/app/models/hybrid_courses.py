@@ -32,6 +32,9 @@ class HybridRecommenderCourses:
         content_recs = self.content_based.recommend(student_id, top_n=top_n)
         knowledge_recs = self.knowledge_based.recommend(student_id, top_n=top_n)
         
+        if not collab_recs and not content_recs and not knowledge_recs:
+            print(f"⚠️  No recommendations found for student {student_id}")
+            return self._get_popular_courses(top_n)
         # 2. Объединить все рекомендации
         all_recommendations = {}
         
@@ -142,6 +145,7 @@ class HybridRecommenderCourses:
         # 5. Вернуть топ-N
         return final_recommendations[:top_n]
     
+    
     def save_recommendations(self, student_id: int, recommendations: List[Dict]):
         """
         Сохранить рекомендации КУРСОВ в БД
@@ -180,3 +184,40 @@ class HybridRecommenderCourses:
             )
         
         self.db.conn.commit()
+    
+    def _get_popular_courses(self, top_n: int = 10) -> List[Dict]:
+        query = """
+            SELECT 
+            c.id as course_id,
+            c.title,
+            c.description,
+            c.difficulty_level,
+            c.subject,
+            AVG(rr.rating) as avg_rating,
+            COUNT(DISTINCT rr.student_id) as student_count
+        FROM courses c
+        JOIN modules m ON c.id = m.course_id
+        JOIN resources r ON m.id = r.module_id
+        LEFT JOIN resource_ratings rr ON r.id = rr.resource_id
+        WHERE c.is_published = true
+        GROUP BY c.id, c.title, c.description, c.difficulty_level, c.subject
+        ORDER BY avg_rating DESC NULLS LAST, student_count DESC
+        LIMIT %s
+    """
+    
+        courses = self.db.execute(query, (top_n,))
+    
+        result = []
+        for course in courses:
+            result.append({
+            'course_id': course['course_id'],
+            'title': course['title'],
+            'description': course['description'],
+            'difficulty_level': course['difficulty_level'],
+            'subject': course['subject'],
+            'score': 0.5,  # Нейтральный score
+            'algorithm': 'popular',
+            'reason': 'Популярный курс'
+        })
+    
+        return result

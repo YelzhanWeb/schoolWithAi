@@ -13,12 +13,34 @@ function getCurrentUser() {
 }
 
 // Create axios instance with auth header
+// frontend/js/api.js - ДОБАВИТЬ:
 function createAxiosInstance() {
     const token = getToken();
-    return axios.create({
+    const instance = axios.create({
         baseURL: API_URL,
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        timeout: 10000 // 10 секунд
     });
+    
+    // ДОБАВИТЬ INTERCEPTOR ДЛЯ ОШИБОК:
+    instance.interceptors.response.use(
+        response => response,
+        error => {
+            if (error.response?.status === 401) {
+                // Токен истек - редирект на логин
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = './login.html';
+            } else if (error.code === 'ECONNABORTED') {
+                showToast('Превышено время ожидания', 'error');
+            } else if (!error.response) {
+                showToast('Нет связи с сервером', 'error');
+            }
+            return Promise.reject(error);
+        }
+    );
+    
+    return instance;
 }
 
 // API Functions
@@ -48,13 +70,26 @@ const API = {
     },
 
     // Recommendations
-    recommendations: {
-        get: () => 
-            createAxiosInstance().get('/recommendations'),
-        
-        refresh: () => 
-            createAxiosInstance().post('/recommendations/refresh')
-    },
+recommendations: {
+    get: () => 
+        createAxiosInstance().get('/recommendations'),
+    
+    refresh: () => 
+        createAxiosInstance().post('/recommendations/refresh'),
+    
+    // ДОБАВИТЬ ДЛЯ КУРСОВ:
+    getCourses: () =>
+        createAxiosInstance().get('/recommendations/courses'),
+    
+    refreshCourses: () =>
+        createAxiosInstance().post('/recommendations/courses/refresh')
+},
+
+// Resources - ДОБАВИТЬ:
+resources: {
+    getById: (id) =>
+        axios.get(`${API_URL}/resources/${id}`)
+},
 
     // Courses
     courses: {

@@ -91,6 +91,10 @@ func (s *Server) setupRoutes() {
 			protected.GET("/profile", profileHandler.GetMyProfile)
 			protected.PUT("/profile", profileHandler.UpdateMyProfile)
 		}
+
+		// backend/internal/adapters/http/server.go
+		resourceHandler := handlers.NewResourceHandler(s.courseService)
+		api.GET("/resources/:id", resourceHandler.GetResource)
 	}
 }
 

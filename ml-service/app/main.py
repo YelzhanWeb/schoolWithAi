@@ -186,7 +186,36 @@ async def update_skill_level(request: SkillUpdateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ml-service/app/main.py - ДОБАВИТЬ:
 
+@app.post("/recommendations/courses/hybrid", response_model=List[RecommendationResponse])
+async def get_hybrid_course_recommendations(request: RecommendationRequest):
+    """
+    Get hybrid course recommendations
+    """
+    try:
+        from .models.hybrid_courses import HybridRecommenderCourses
+        
+        courses_recommender = HybridRecommenderCourses(db)
+        recs = courses_recommender.recommend(request.student_id, request.top_n)
+        
+        # Конвертировать course_id -> resource_id для совместимости
+        # (или создать отдельную схему CourseRecommendationResponse)
+        result = []
+        for rec in recs:
+            result.append({
+                "resource_id": rec['course_id'],  # Используем course_id
+                "title": rec['title'],
+                "score": rec['score'],
+                "algorithm": rec['algorithm'],
+                "reason": rec['reason'],
+                "details": rec.get('details')
+            })
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 # Run with: uvicorn app.main:app --reload --host 0.0.0.0 --port 5000
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=5000, reload=True)

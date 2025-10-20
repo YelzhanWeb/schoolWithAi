@@ -1,10 +1,8 @@
 package redis
 
-import "backend/internal/ports"
+// type redis struct {
+// }
 
-type redis struct {
-}
-
-func NewRedis() ports.Redis {
-	return &redis{}
-}
+// func NewRedis() ports.Redis {
+// 	return &redis{}
+// }
