@@ -76,13 +76,6 @@ recommendations: {
     
     refresh: () => 
         createAxiosInstance().post('/recommendations/refresh'),
-    
-    // ДОБАВИТЬ ДЛЯ КУРСОВ:
-    getCourses: () =>
-        createAxiosInstance().get('/recommendations/courses'),
-    
-    refreshCourses: () =>
-        createAxiosInstance().post('/recommendations/courses/refresh')
 },
 
 // Resources - ДОБАВИТЬ:
