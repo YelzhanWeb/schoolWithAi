@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Каталог курсов - EduPlatform</title>
+    <title>Каталог курсов - OqysAI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
@@ -14,7 +14,7 @@
     <nav class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold text-indigo-600">🎓 EduPlatform</h1>
+                <h1 class="text-2xl font-bold text-indigo-600">🎓 OqysAI</h1>
                 <div class="flex items-center space-x-6">
                     <a href="./dashboard.html" class="text-gray-600 hover:text-indigo-600">Главная</a>
                     <a href="./courses.html" class="text-indigo-600 font-semibold">Курсы</a>
@@ -121,6 +121,16 @@
             } catch (error) {
                 showError('coursesGrid', 'Ошибка загрузки курсов');
             }
+        }
+
+        if (allCourses.length === 0) {
+            document.getElementById('coursesGrid').innerHTML = `
+            <div class="col-span-3 text-center py-12">
+                <p class="text-gray-500 text-lg">Курсы пока не добавлены</p>
+                <p class="text-gray-400 mt-2">Попробуйте обновить страницу</p>
+            </div>
+        `;
+            return;
         }
 
         // Display courses

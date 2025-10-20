@@ -10,7 +10,7 @@ from .models.knowledge_based import KnowledgeBasedFiltering
 
 # FastAPI app
 app = FastAPI(
-    title="Education Platform ML Service",
+    title="OqysAI ML Service",
     description="ML-powered recommendation system",
     version="1.0.0"
 )
@@ -93,7 +93,7 @@ async def root():
     """Health check"""
     return {
         "status": "ok",
-        "service": "Education Platform ML Service",
+        "service": "OqysAI ML Service",
         "version": "1.0.0"
     }
 

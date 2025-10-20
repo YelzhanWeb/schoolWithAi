@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Урок - EduPlatform</title>
+    <title>Урок - OqysAI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
@@ -14,7 +14,7 @@
     <nav class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
-                <a href="./dashboard.html" class="text-2xl font-bold text-indigo-600">🎓 EduPlatform</a>
+                <a href="./dashboard.html" class="text-2xl font-bold text-indigo-600">🎓 OqysAI</a>
                 <button onclick="window.history.back()" class="text-gray-600 hover:text-indigo-600">
                     ← Назад
                 </button>
@@ -120,10 +120,8 @@
         // Load lesson
         async function loadLesson() {
             try {
-                // Вот исправление:
-                // Мы загружаем данные с бэкенда, а не используем заглушку
                 const response = await API.resources.getById(resourceId);
-                const lesson = response.data.resource; // Убедись, что ключ 'resource'
+                const lesson = response.data.resource;
 
                 if (!lesson) {
                     throw new Error('Lesson data is empty');

@@ -166,3 +166,4 @@ class CollaborativeFilteringCourses:
             })
         
         return result
+    
