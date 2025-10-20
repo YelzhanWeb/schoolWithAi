@@ -166,4 +166,44 @@ class CollaborativeFiltering:
             })
         
         return result
+    def _get_popular_items(self, top_n: int = 10) -> List[Dict]:
+
+        print(f"⚠️ No similar users found, returning popular courses.") # Добавим лог
+
+    # Запрос для получения популярных курсов (высокий средний рейтинг + кол-во оценок)
+        query = """
+        SELECT 
+            c.id as course_id,
+            c.title,
+            c.description,
+            c.difficulty_level,
+            c.subject,
+            AVG(rr.rating) as avg_rating,
+            COUNT(DISTINCT rr.student_id) as rating_count
+        FROM courses c
+        JOIN modules m ON c.id = m.course_id
+        JOIN resources r ON m.id = r.module_id
+        LEFT JOIN resource_ratings rr ON r.id = rr.resource_id
+        WHERE c.is_published = true
+        GROUP BY c.id, c.title, c.description, c.difficulty_level, c.subject
+        ORDER BY avg_rating DESC NULLS LAST, rating_count DESC
+        LIMIT %s
+    """
+
+        popular_courses = self.db.execute(query, (top_n,))
+
+        result = []
+        for course in popular_courses:
+            result.append({
+            'course_id': course['course_id'],
+            'title': course['title'],
+            'description': course['description'],
+            'difficulty_level': course['difficulty_level'],
+            'subject': course['subject'],
+            'score': 0.5,  # Используем нейтральный score для популярных
+            'algorithm': 'popular', # Указываем, что это популярные
+            'reason': 'Популярный курс среди всех пользователей'
+        })
+
+        return result
     
