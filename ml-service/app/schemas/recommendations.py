@@ -8,7 +8,7 @@ class RecommendationsRequest(BaseModel):
 
 
 class RecommendationResponse(BaseModel):
-    resource_id: int
+    course_id: int
     title: str
     score: float
     algorithm: str

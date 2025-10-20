@@ -4,8 +4,6 @@ DROP TABLE IF EXISTS student_achievements CASCADE;
 
 DROP TABLE IF EXISTS achievements CASCADE;
 
-DROP TABLE IF EXISTS recommendations CASCADE;
-
 DROP TABLE IF EXISTS student_skills CASCADE;
 
 DROP TABLE IF EXISTS resource_tags CASCADE;

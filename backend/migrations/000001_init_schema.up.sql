@@ -281,31 +281,6 @@ CREATE INDEX idx_student_skills_student ON student_skills (student_id);
 
 CREATE INDEX idx_student_skills_name ON student_skills (skill_name);
 
--- Saved recommendations
-CREATE TABLE recommendations (
-    id SERIAL PRIMARY KEY,
-    student_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
-    resource_id INTEGER REFERENCES resources (id) ON DELETE CASCADE,
-    score FLOAT,
-    reason TEXT,
-    algorithm_type VARCHAR(50) CHECK (
-        algorithm_type IN (
-            'collaborative',
-            'content',
-            'knowledge',
-            'hybrid'
-        )
-    ),
-    is_viewed BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_recommendations_student ON recommendations (student_id);
-
-CREATE INDEX idx_recommendations_score ON recommendations (score DESC);
-
-CREATE INDEX idx_recommendations_created ON recommendations (created_at DESC);
-
 -- ========================================
 -- GAMIFICATION
 -- ========================================

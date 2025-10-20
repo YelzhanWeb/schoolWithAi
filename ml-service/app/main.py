@@ -25,13 +25,12 @@ app.add_middleware(
 )
 
 # Global ML models
-recommender = None
 knowledge_filter = None
 
 
 # Pydantic schemas
 class RecommendationResponse(BaseModel):
-    resource_id: int
+    course_id: int
     title: str
     score: float
     algorithm: str
@@ -61,7 +60,7 @@ class SkillUpdateResponse(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize ML models on startup"""
-    global recommender, knowledge_filter
+    global knowledge_filter
     
     print("🚀 Starting ML Service...")
     
@@ -69,12 +68,10 @@ async def startup_event():
     db.connect()
     
     # Initialize ML models
-    recommender = HybridRecommender(db)
     knowledge_filter = KnowledgeBasedFiltering(db)
     
     # Build collaborative filtering matrix
     print("Building collaborative filtering matrix...")
-    recommender.collaborative.build_matrix()
     
     print("✅ ML Service ready!")
 
@@ -113,58 +110,6 @@ async def health_check():
         raise HTTPException(status_code=503, detail=f"Service unhealthy: {str(e)}")
 
 
-@app.post("/recommendations/hybrid", response_model=List[RecommendationResponse])
-async def get_hybrid_recommendations(request: RecommendationRequest):
-    """
-    Get hybrid recommendations (combines all three methods)
-    """
-    try:
-        recs = recommender.recommend(request.student_id, request.top_n)
-        
-        # Save to database
-        recommender.save_recommendations(request.student_id, recs)
-        
-        return recs
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/recommendations/collaborative", response_model=List[RecommendationResponse])
-async def get_collaborative_recommendations(request: RecommendationRequest):
-    """
-    Get collaborative filtering recommendations
-    """
-    try:
-        recs = recommender.collaborative.recommend(request.student_id, request.top_n)
-        return recs
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/recommendations/content-based", response_model=List[RecommendationResponse])
-async def get_content_based_recommendations(request: RecommendationRequest):
-    """
-    Get content-based recommendations
-    """
-    try:
-        recs = recommender.content_based.recommend(request.student_id, request.top_n)
-        return recs
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/recommendations/knowledge-based", response_model=List[RecommendationResponse])
-async def get_knowledge_based_recommendations(request: RecommendationRequest):
-    """
-    Get knowledge-based recommendations
-    """
-    try:
-        recs = recommender.knowledge_based.recommend(request.student_id, request.top_n)
-        return recs
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/skills/update", response_model=SkillUpdateResponse)
 async def update_skill_level(request: SkillUpdateRequest):
     """
@@ -186,33 +131,17 @@ async def update_skill_level(request: SkillUpdateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ml-service/app/main.py - ДОБАВИТЬ:
 
-@app.post("/recommendations/courses/hybrid", response_model=List[RecommendationResponse])
-async def get_hybrid_course_recommendations(request: RecommendationRequest):
+@app.post("/recommendations/hybrid", response_model=List[RecommendationResponse])
+async def get_hybrid_recommendations(request: RecommendationRequest):
     """
     Get hybrid course recommendations
     """
-    try:
-        from .models.hybrid_courses import HybridRecommenderCourses
-        
-        courses_recommender = HybridRecommenderCourses(db)
-        recs = courses_recommender.recommend(request.student_id, request.top_n)
-        
-        # Конвертировать course_id -> resource_id для совместимости
-        # (или создать отдельную схему CourseRecommendationResponse)
-        result = []
-        for rec in recs:
-            result.append({
-                "resource_id": rec['course_id'],  # Используем course_id
-                "title": rec['title'],
-                "score": rec['score'],
-                "algorithm": rec['algorithm'],
-                "reason": rec['reason'],
-                "details": rec.get('details')
-            })
-        
-        return result
+    try:        
+        recommender = HybridRecommender(db)
+        recs = recommender.recommend(request.student_id, request.top_n)
+
+        return recs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     

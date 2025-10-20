@@ -6,7 +6,7 @@ from .knowledge_based import KnowledgeBasedFiltering
 
 class HybridRecommender:
     """
-    Гибридная рекомендательная система
+    Гибридная рекомендательная система для КУРСОВ
     Объединяет: Collaborative + Content-Based + Knowledge-Based
     """
     
@@ -25,22 +25,28 @@ class HybridRecommender:
     
     def recommend(self, student_id: int, top_n: int = 10) -> List[Dict]:
         """
-        Генерация гибридных рекомендаций
+        Генерация гибридных рекомендаций КУРСОВ
         """
         # 1. Получить рекомендации от каждого алгоритма
         collab_recs = self.collaborative.recommend(student_id, top_n=top_n)
         content_recs = self.content_based.recommend(student_id, top_n=top_n)
         knowledge_recs = self.knowledge_based.recommend(student_id, top_n=top_n)
         
+        if not collab_recs and not content_recs and not knowledge_recs:
+            print(f"⚠️  No recommendations found for student {student_id}")
+            return self._get_popular_courses(top_n)
         # 2. Объединить все рекомендации
         all_recommendations = {}
         
         # Добавить collaborative
         for rec in collab_recs:
-            resource_id = rec['resource_id']
-            all_recommendations[resource_id] = {
-                'resource_id': resource_id,
+            course_id = rec['course_id']
+            all_recommendations[course_id] = {
+                'course_id': course_id,
                 'title': rec['title'],
+                'description': rec.get('description', ''),
+                'difficulty_level': rec.get('difficulty_level', 3),
+                'subject': rec.get('subject', ''),
                 'scores': {
                     'collaborative': rec['score'],
                     'content_based': 0.0,
@@ -51,14 +57,17 @@ class HybridRecommender:
         
         # Добавить content-based
         for rec in content_recs:
-            resource_id = rec['resource_id']
-            if resource_id in all_recommendations:
-                all_recommendations[resource_id]['scores']['content_based'] = rec['score']
-                all_recommendations[resource_id]['reasons'].append(rec['reason'])
+            course_id = rec['course_id']
+            if course_id in all_recommendations:
+                all_recommendations[course_id]['scores']['content_based'] = rec['score']
+                all_recommendations[course_id]['reasons'].append(rec['reason'])
             else:
-                all_recommendations[resource_id] = {
-                    'resource_id': resource_id,
+                all_recommendations[course_id] = {
+                    'course_id': course_id,
                     'title': rec['title'],
+                    'description': rec.get('description', ''),
+                    'difficulty_level': rec.get('difficulty_level', 3),
+                    'subject': rec.get('subject', ''),
                     'scores': {
                         'collaborative': 0.0,
                         'content_based': rec['score'],
@@ -69,14 +78,17 @@ class HybridRecommender:
         
         # Добавить knowledge-based
         for rec in knowledge_recs:
-            resource_id = rec['resource_id']
-            if resource_id in all_recommendations:
-                all_recommendations[resource_id]['scores']['knowledge_based'] = rec['score']
-                all_recommendations[resource_id]['reasons'].append(rec['reason'])
+            course_id = rec['course_id']
+            if course_id in all_recommendations:
+                all_recommendations[course_id]['scores']['knowledge_based'] = rec['score']
+                all_recommendations[course_id]['reasons'].append(rec['reason'])
             else:
-                all_recommendations[resource_id] = {
-                    'resource_id': resource_id,
+                all_recommendations[course_id] = {
+                    'course_id': course_id,
                     'title': rec['title'],
+                    'description': rec.get('description', ''),
+                    'difficulty_level': rec.get('difficulty_level', 3),
+                    'subject': rec.get('subject', ''),
                     'scores': {
                         'collaborative': 0.0,
                         'content_based': 0.0,
@@ -85,10 +97,10 @@ class HybridRecommender:
                     'reasons': [rec['reason']]
                 }
         
-        # 3. Вычислить финальный score для каждого ресурса
+        # 3. Вычислить финальный score для каждого курса
         final_recommendations = []
         
-        for resource_id, data in all_recommendations.items():
+        for course_id, data in all_recommendations.items():
             scores = data['scores']
             
             # Взвешенная сумма
@@ -98,10 +110,10 @@ class HybridRecommender:
                 scores['knowledge_based'] * self.weights['knowledge_based']
             )
             
-            # Бонус если ресурс рекомендован несколькими алгоритмами
+            # Бонус если курс рекомендован несколькими алгоритмами
             num_algorithms = sum(1 for s in scores.values() if s > 0)
             if num_algorithms > 1:
-                final_score *= 1.1
+                final_score *= 1.15  # +15% бонус
             
             # Ограничить 0-1
             final_score = min(final_score, 1.0)
@@ -110,8 +122,11 @@ class HybridRecommender:
             main_reason = data['reasons'][0] if data['reasons'] else "Рекомендовано для вас"
             
             final_recommendations.append({
-                'resource_id': resource_id,
+                'course_id': course_id,
                 'title': data['title'],
+                'description': data['description'],
+                'difficulty_level': data['difficulty_level'],
+                'subject': data['subject'],
                 'score': round(final_score, 3),
                 'algorithm': 'hybrid',
                 'reason': main_reason,
@@ -119,7 +134,8 @@ class HybridRecommender:
                     'collaborative_score': round(scores['collaborative'], 3),
                     'content_based_score': round(scores['content_based'], 3),
                     'knowledge_based_score': round(scores['knowledge_based'], 3),
-                    'all_reasons': data['reasons']
+                    'all_reasons': data['reasons'],
+                    'num_algorithms': num_algorithms
                 }
             })
         
@@ -129,13 +145,14 @@ class HybridRecommender:
         # 5. Вернуть топ-N
         return final_recommendations[:top_n]
     
+    
     def save_recommendations(self, student_id: int, recommendations: List[Dict]):
         """
-        Сохранить рекомендации в БД
+        Сохранить рекомендации КУРСОВ в БД
         """
-        # Удалить старые рекомендации (старше 7 дней)
+        # Удалить старые рекомендации
         delete_query = """
-            DELETE FROM recommendations
+            DELETE FROM course_recommendations
             WHERE student_id = %s
               AND created_at < NOW() - INTERVAL '7 days'
         """
@@ -143,10 +160,15 @@ class HybridRecommender:
         
         # Вставить новые рекомендации
         insert_query = """
-            INSERT INTO recommendations 
-                (student_id, resource_id, score, reason, algorithm_type, is_viewed)
+            INSERT INTO course_recommendations 
+                (student_id, course_id, score, reason, algorithm_type, is_viewed)
             VALUES (%s, %s, %s, %s, %s, false)
-            ON CONFLICT DO NOTHING
+            ON CONFLICT (student_id, course_id) 
+            DO UPDATE SET
+                score = EXCLUDED.score,
+                reason = EXCLUDED.reason,
+                algorithm_type = EXCLUDED.algorithm_type,
+                created_at = NOW()
         """
         
         for rec in recommendations:
@@ -154,7 +176,7 @@ class HybridRecommender:
                 insert_query,
                 (
                     student_id,
-                    rec['resource_id'],
+                    rec['course_id'],
                     rec['score'],
                     rec['reason'],
                     rec['algorithm']
@@ -162,3 +184,40 @@ class HybridRecommender:
             )
         
         self.db.conn.commit()
+    
+    def _get_popular_courses(self, top_n: int = 10) -> List[Dict]:
+        query = """
+            SELECT 
+            c.id as course_id,
+            c.title,
+            c.description,
+            c.difficulty_level,
+            c.subject,
+            AVG(rr.rating) as avg_rating,
+            COUNT(DISTINCT rr.student_id) as student_count
+        FROM courses c
+        JOIN modules m ON c.id = m.course_id
+        JOIN resources r ON m.id = r.module_id
+        LEFT JOIN resource_ratings rr ON r.id = rr.resource_id
+        WHERE c.is_published = true
+        GROUP BY c.id, c.title, c.description, c.difficulty_level, c.subject
+        ORDER BY avg_rating DESC NULLS LAST, student_count DESC
+        LIMIT %s
+    """
+    
+        courses = self.db.execute(query, (top_n,))
+    
+        result = []
+        for course in courses:
+            result.append({
+            'course_id': course['course_id'],
+            'title': course['title'],
+            'description': course['description'],
+            'difficulty_level': course['difficulty_level'],
+            'subject': course['subject'],
+            'score': 0.5,  # Нейтральный score
+            'algorithm': 'popular',
+            'reason': 'Популярный курс'
+        })
+    
+        return result

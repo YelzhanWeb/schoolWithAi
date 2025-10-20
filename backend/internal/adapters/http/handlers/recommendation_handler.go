@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"backend/internal/domain/models"
 	"backend/internal/domain/services"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +32,11 @@ func (h *RecommendationHandler) GetRecommendations(c *gin.Context) {
 		10,
 	)
 	if err != nil {
+		if err.Error() == "failed to get recommendations from ML service" {
+			log.Printf("ML service unavailable for student %d, returning empty list", userID.(int64))
+			c.JSON(http.StatusOK, gin.H{"recommendations": []*models.RecommendationResponse{}}) // Пустой список
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
