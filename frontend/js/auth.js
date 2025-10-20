@@ -19,13 +19,13 @@ function isTeacher() {
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/login.html';
+    window.location.href = './login.html';
 }
 
 // Protect page (redirect to login if not authenticated)
 function protectPage() {
     if (!isAuthenticated()) {
-        window.location.href = '/login.html';
+        window.location.href = './login.html';
         return false;
     }
     return true;
@@ -36,7 +36,7 @@ function protectStudentPage() {
     if (!protectPage()) return false;
     
     if (!isStudent()) {
-        window.location.href = '/teacher.html';
+        window.location.href = './teacher.html';
         return false;
     }
     return true;
@@ -73,6 +73,6 @@ async function initAuth() {
     
     // Redirect to profile setup if needed (except on profile-setup page)
     if (!hasProfile && !window.location.pathname.includes('profile-setup')) {
-        window.location.href = '/profile-setup.html';
+        window.location.href = './profile-setup.html';
     }
 }

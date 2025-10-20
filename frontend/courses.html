@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог курсов - EduPlatform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-indigo-600">🎓 EduPlatform</h1>
+                <div class="flex items-center space-x-6">
+                    <a href="./dashboard.html" class="text-gray-600 hover:text-indigo-600">Главная</a>
+                    <a href="./courses.html" class="text-indigo-600 font-semibold">Курсы</a>
+                    <a href="./recommendations.html" class="text-gray-600 hover:text-indigo-600">Рекомендации</a>
+                    <a href="./profile-setup.html" class="text-gray-600 hover:text-indigo-600">Профиль</a>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-gray-700" id="userName">Загрузка...</span>
+                        <button onclick="logout()" class="text-red-600 hover:text-red-700">Выйти</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">📚 Каталог курсов</h2>
+            <p class="text-gray-600">Выбери курс и начни обучение</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Предмет</label>
+                    <select id="filterSubject" onchange="applyFilters()"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Все предметы</option>
+                        <option value="mathematics">Математика</option>
+                        <option value="physics">Физика</option>
+                        <option value="chemistry">Химия</option>
+                        <option value="biology">Биология</option>
+                        <option value="literature">Литература</option>
+                        <option value="history">История</option>
+                        <option value="logic">Критическое мышление</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Сложность</label>
+                    <select id="filterDifficulty" onchange="applyFilters()"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Любая</option>
+                        <option value="1">⭐ Очень легко</option>
+                        <option value="2">⭐⭐ Легко</option>
+                        <option value="3">⭐⭐⭐ Средне</option>
+                        <option value="4">⭐⭐⭐⭐ Сложно</option>
+                        <option value="5">⭐⭐⭐⭐⭐ Очень сложно</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Возрастная группа</label>
+                    <select id="filterAgeGroup" onchange="applyFilters()"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Все</option>
+                        <option value="junior">Младшие классы (1-4)</option>
+                        <option value="middle">Средние классы (5-8)</option>
+                        <option value="senior">Старшие классы (9-11)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Поиск</label>
+                    <input type="text" id="searchInput" placeholder="Найти курс..." oninput="applyFilters()"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                </div>
+            </div>
+        </div>
+
+        <!-- Courses Grid -->
+        <div id="coursesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Will be loaded by JS -->
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        initAuth();
+
+        let allCourses = [];
+
+        // Load courses
+        async function loadCourses() {
+            showLoading('coursesGrid');
+
+            try {
+                const response = await API.courses.getAll();
+                allCourses = response.data.courses || [];
+
+                if (allCourses.length === 0) {
+                    document.getElementById('coursesGrid').innerHTML = `
+                        <div class="col-span-3 text-center py-12">
+                            <p class="text-gray-500 text-lg">Курсы пока не добавлены</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                displayCourses(allCourses);
+            } catch (error) {
+                showError('coursesGrid', 'Ошибка загрузки курсов');
+            }
+        }
+
+        // Display courses
+        function displayCourses(courses) {
+            const html = courses.map(course => {
+                const difficultyStars = '⭐'.repeat(course.difficulty_level || 3);
+                const ageGroupText = {
+                    'junior': 'Младшие классы',
+                    'middle': 'Средние классы',
+                    'senior': 'Старшие классы'
+                }[course.age_group] || course.age_group;
+
+                return `
+                    <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition overflow-hidden">
+                        <!-- Thumbnail -->
+                        <div class="h-48 bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+                            <span class="text-6xl">📚</span>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">${course.title}</h3>
+                            <p class="text-gray-600 text-sm mb-4 line-clamp-2">${course.description || 'Описание курса'}</p>
+
+                            <!-- Badges -->
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded">
+                                    ${course.subject || 'Предмет'}
+                                </span>
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
+                                    ${difficultyStars}
+                                </span>
+                                <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                                    ${ageGroupText}
+                                </span>
+                            </div>
+
+                            <!-- Action Button -->
+                            <a href="./course-detail.html?id=${course.id}" 
+                               class="block w-full text-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                                Открыть курс →
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('coursesGrid').innerHTML = html;
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const subject = document.getElementById('filterSubject').value.toLowerCase();
+            const difficulty = document.getElementById('filterDifficulty').value;
+            const ageGroup = document.getElementById('filterAgeGroup').value.toLowerCase();
+            const search = document.getElementById('searchInput').value.toLowerCase();
+
+            let filtered = [...allCourses];
+
+            // Filter by subject
+            if (subject) {
+                filtered = filtered.filter(c => c.subject?.toLowerCase() === subject);
+            }
+
+            // Filter by difficulty
+            if (difficulty) {
+                filtered = filtered.filter(c => c.difficulty_level === parseInt(difficulty));
+            }
+
+            // Filter by age group
+            if (ageGroup) {
+                filtered = filtered.filter(c => c.age_group?.toLowerCase() === ageGroup);
+            }
+
+            // Search
+            if (search) {
+                filtered = filtered.filter(c =>
+                    c.title?.toLowerCase().includes(search) ||
+                    c.description?.toLowerCase().includes(search)
+                );
+            }
+
+            displayCourses(filtered);
+        }
+
+        // Load on page ready
+        loadCourses();
+    </script>
+</body>
+
+</html>

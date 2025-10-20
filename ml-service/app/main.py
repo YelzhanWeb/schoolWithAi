@@ -5,8 +5,8 @@ from typing import List, Optional
 import uvicorn
 
 from .database import db
-from .models.hybrid import HybridRecommender
-from .models.knowledge_based import KnowledgeBasedFiltering
+from .models.hybrid_courses import HybridRecommenderCourses
+from .models.knowledge_based_courses import KnowledgeBasedFilteringCourses
 
 # FastAPI app
 app = FastAPI(
@@ -69,8 +69,8 @@ async def startup_event():
     db.connect()
     
     # Initialize ML models
-    recommender = HybridRecommender(db)
-    knowledge_filter = KnowledgeBasedFiltering(db)
+    recommender = HybridRecommenderCourses(db)
+    knowledge_filter = KnowledgeBasedFilteringCourses(db)
     
     # Build collaborative filtering matrix
     print("Building collaborative filtering matrix...")

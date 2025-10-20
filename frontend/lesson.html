@@ -14,7 +14,7 @@
     <nav class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
-                <a href="/dashboard.html" class="text-2xl font-bold text-indigo-600">🎓 EduPlatform</a>
+                <a href="./dashboard.html" class="text-2xl font-bold text-indigo-600">🎓 EduPlatform</a>
                 <button onclick="window.history.back()" class="text-gray-600 hover:text-indigo-600">
                     ← Назад
                 </button>
@@ -103,7 +103,7 @@
 
         if (!resourceId) {
             alert('Неверный ID урока');
-            window.location.href = '/dashboard.html';
+            window.location.href = './dashboard.html';
         }
 
         // Start timer
@@ -150,7 +150,7 @@
             } catch (error) {
                 console.error('Error loading lesson:', error);
                 alert('Ошибка загрузки урока');
-                window.location.href = '/dashboard.html';
+                window.location.href = './dashboard.html';
             }
         }
 
@@ -215,7 +215,7 @@
                 showToast('Урок завершён! +10 очков');
 
                 setTimeout(() => {
-                    window.location.href = '/dashboard.html';
+                    window.location.href = './dashboard.html';
                 }, 1500);
             } catch (error) {
                 showToast('Ошибка сохранения прогресса', 'error');
@@ -238,7 +238,7 @@
                 showToast('Прогресс сохранён');
 
                 setTimeout(() => {
-                    window.location.href = '/dashboard.html';
+                    window.location.href = './dashboard.html';
                 }, 1000);
             } catch (error) {
                 showToast('Ошибка сохранения', 'error');

@@ -179,7 +179,7 @@
 
             try {
                 await API.profile.create(profileData);
-                window.location.href = '/dashboard.html';
+                window.location.href = './dashboard.html';
             } catch (error) {
                 const errorMsg = error.response?.data?.error || 'Ошибка сохранения профиля';
                 document.getElementById('errorMessage').textContent = errorMsg;
