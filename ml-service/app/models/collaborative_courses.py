@@ -98,8 +98,7 @@ class CollaborativeFilteringCourses:
         similar_users = self.find_similar_users(student_id, top_n=10)
         
         if not similar_users:
-            print(f"⚠️  No similar users found for student {student_id}")
-            return []
+           return self._get_popular_items(top_n)
         
         similar_user_ids = [uid for uid, _ in similar_users]
         

@@ -19,7 +19,7 @@ function createAxiosInstance() {
     const instance = axios.create({
         baseURL: API_URL,
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        timeout: 10000 // 10 секунд
+        timeout: 30000  // 30 секунд
     });
     
     // ДОБАВИТЬ INTERCEPTOR ДЛЯ ОШИБОК:

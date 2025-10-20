@@ -83,6 +83,7 @@ func main() {
 	<-quit
 
 	log.Println("🛑 Shutting down server...")
+	db.Close()
 	log.Println("✅ Server stopped gracefully")
 }
 
