@@ -82,12 +82,11 @@
     <script src="js/auth.js"></script>
     <script src="js/main.js"></script>
     <script>
-        initAuth();
+        // initAuth(); // УБРАТЬ - публичная страница
 
         let courseId = null;
         let modules = [];
 
-        // Get course ID from URL
         const urlParams = new URLSearchParams(window.location.search);
         courseId = parseInt(urlParams.get('id'));
 
@@ -96,12 +95,18 @@
             window.location.href = './courses.html';
         }
 
-        // Load course details
         async function loadCourse() {
             try {
+                console.log('Загрузка курса ID:', courseId);
+
                 const response = await API.courses.getById(courseId);
+                console.log('Ответ API:', response);
+
                 const course = response.data.course;
                 modules = response.data.modules || [];
+
+                console.log('Курс:', course);
+                console.log('Модули:', modules);
 
                 // Display course info
                 document.getElementById('courseTitle').textContent = course.title;
@@ -118,79 +123,77 @@
                 }[course.age_group] || course.age_group;
                 document.getElementById('courseAgeGroup').textContent = ageGroupText;
 
-                // Stats
                 document.getElementById('modulesCount').textContent = modules.length;
 
-                // Count total resources
+                // Load resources for each module
                 let totalResources = 0;
                 for (const module of modules) {
-                    const resourcesRes = await API.courses.getModuleResources(module.id);
-                    module.resources = resourcesRes.data.resources || [];
-                    totalResources += module.resources.length;
+                    try {
+                        const resourcesRes = await API.courses.getModuleResources(module.id);
+                        module.resources = resourcesRes.data.resources || [];
+                        totalResources += module.resources.length;
+                    } catch (error) {
+                        console.error(`Ошибка загрузки ресурсов модуля ${module.id}:`, error);
+                        module.resources = [];
+                    }
                 }
+
                 document.getElementById('resourcesCount').textContent = totalResources;
 
-                // Display modules
                 displayModules(modules);
 
-                // Show content
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('courseContent').classList.remove('hidden');
 
             } catch (error) {
-                console.error('Error loading course:', error);
-                alert('Ошибка загрузки курса');
+                console.error('Ошибка загрузки курса:', error);
+                alert('Ошибка загрузки курса: ' + (error.message || 'Unknown'));
                 window.history.back();
             }
         }
 
-        // Display modules
         function displayModules(modules) {
             if (modules.length === 0) {
                 document.getElementById('modulesList').innerHTML = `
-                    <div class="bg-white rounded-lg shadow-md p-8 text-center">
-                        <p class="text-gray-500">Модули ещё не добавлены</p>
-                    </div>
-                `;
+                <div class="bg-white rounded-lg shadow-md p-8 text-center">
+                    <p class="text-gray-500">Модули ещё не добавлены</p>
+                </div>
+            `;
                 return;
             }
 
             const html = modules.map((module, index) => `
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <!-- Module Header -->
-                    <div class="bg-indigo-50 p-6 cursor-pointer hover:bg-indigo-100 transition"
-                         onclick="toggleModule(${index})">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-4 flex-1">
-                                <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
-                                    ${module.order_index}
-                                </div>
-                                <div>
-                                    <h3 class="text-xl font-bold text-gray-800">${module.title}</h3>
-                                    <p class="text-gray-600 text-sm">${module.description || ''}</p>
-                                </div>
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="bg-indigo-50 p-6 cursor-pointer hover:bg-indigo-100 transition"
+                     onclick="toggleModule(${index})">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4 flex-1">
+                            <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
+                                ${module.order_index}
                             </div>
-                            <div class="flex items-center space-x-4">
-                                <span class="text-sm text-gray-600">${module.resources?.length || 0} уроков</span>
-                                <svg id="arrow-${index}" class="w-6 h-6 text-gray-600 transform transition-transform" 
-                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">${module.title}</h3>
+                                <p class="text-gray-600 text-sm">${module.description || ''}</p>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Module Resources (collapsible) -->
-                    <div id="module-${index}" class="hidden p-6 border-t">
-                        ${displayResources(module.resources || [], module.id)}
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm text-gray-600">${module.resources?.length || 0} уроков</span>
+                            <svg id="arrow-${index}" class="w-6 h-6 text-gray-600 transform transition-transform" 
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
                     </div>
                 </div>
-            `).join('');
+                <div id="module-${index}" class="hidden p-6 border-t">
+                    ${displayResources(module.resources || [], module.id)}
+                </div>
+            </div>
+        `).join('');
 
             document.getElementById('modulesList').innerHTML = html;
         }
 
-        // Display resources for a module
         function displayResources(resources, moduleId) {
             if (resources.length === 0) {
                 return '<p class="text-gray-500 text-center py-4">Уроки ещё не добавлены</p>';
@@ -201,27 +204,26 @@
                 const difficulty = getDifficultyBadge(resource.difficulty || 3);
 
                 return `
-                    <div class="flex items-center justify-between py-3 border-b last:border-b-0 hover:bg-gray-50 transition">
-                        <div class="flex items-center space-x-4 flex-1">
-                            <span class="text-2xl">${icon}</span>
-                            <div>
-                                <h4 class="font-semibold text-gray-800">${resource.title}</h4>
-                                <div class="flex items-center space-x-2 mt-1">
-                                    ${difficulty}
-                                    <span class="text-xs text-gray-500">⏱️ ${resource.estimated_time || 10} мин</span>
-                                </div>
+                <div class="flex items-center justify-between py-3 border-b last:border-b-0 hover:bg-gray-50 transition">
+                    <div class="flex items-center space-x-4 flex-1">
+                        <span class="text-2xl">${icon}</span>
+                        <div>
+                            <h4 class="font-semibold text-gray-800">${resource.title}</h4>
+                            <div class="flex items-center space-x-2 mt-1">
+                                ${difficulty}
+                                <span class="text-xs text-gray-500">⏱️ ${resource.estimated_time || 10} мин</span>
                             </div>
                         </div>
-                        <a href="./lesson.html?id=${resource.id}" 
-                           class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-                            Начать →
-                        </a>
                     </div>
-                `;
+                    <a href="./lesson.html?id=${resource.id}" 
+                       class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                        Начать →
+                    </a>
+                </div>
+            `;
             }).join('');
         }
 
-        // Toggle module visibility
         function toggleModule(index) {
             const moduleDiv = document.getElementById(`module-${index}`);
             const arrow = document.getElementById(`arrow-${index}`);
@@ -235,7 +237,6 @@
             }
         }
 
-        // Load on page ready
         loadCourse();
     </script>
 </body>
