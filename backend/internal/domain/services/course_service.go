@@ -5,6 +5,7 @@ import (
 	"backend/internal/ports/repositories"
 	"context"
 	"errors"
+	"fmt"
 )
 
 type CourseService struct {
@@ -51,11 +52,11 @@ func (s *CourseService) GetCourseDetails(ctx context.Context, courseID int64) (*
 
 // GetModuleResources - получить ресурсы модуля
 func (s *CourseService) GetModuleResources(ctx context.Context, moduleID int64) ([]*models.Resource, error) {
+	fmt.Println(moduleID)
 	resources, err := s.courseRepo.GetResources(ctx, moduleID)
 	if err != nil {
 		return nil, errors.New("failed to fetch resources")
 	}
-
 	return resources, nil
 }
 
