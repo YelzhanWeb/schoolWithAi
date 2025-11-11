@@ -1,11 +1,13 @@
 package postgre
 
 import (
-	"backend/internal/domain/models"
-	"backend/internal/ports/repositories"
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
+
+	"backend/internal/domain/models"
+	"backend/internal/ports/repositories"
 )
 
 type courseRepository struct {
@@ -185,18 +187,108 @@ func (r *courseRepository) GetResources(ctx context.Context, moduleID int64) ([]
 }
 
 func (r *courseRepository) Create(ctx context.Context, course *models.Course) error {
-	// TODO: Implement
+	query := `
+		INSERT INTO courses 
+			(title, description, created_by, difficulty_level, age_group, subject, is_published, thumbnail_url, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING id
+	`
+	err := r.db.QueryRowContext(
+		ctx,
+		query,
+		course.Title,
+		course.Description,
+		course.CreatedBy, // ID Учителя
+		course.DifficultyLevel,
+		course.AgeGroup,
+		course.Subject,
+		course.IsPublished, // По умолчанию false
+		course.ThumbnailURL,
+		time.Now(),
+		time.Now(),
+	).Scan(&course.ID)
+	if err != nil {
+		return fmt.Errorf("failed to create course: %w", err)
+	}
 	return nil
 }
 
 func (r *courseRepository) Update(ctx context.Context, course *models.Course) error {
-	// TODO: Implement
+	query := `
+		UPDATE courses
+		SET title = $1, description = $2, difficulty_level = $3, 
+		    age_group = $4, subject = $5, is_published = $6, updated_at = $7
+		WHERE id = $8 AND created_by = $9
+	`
+	// Важно: проверяем created_by, чтобы учитель не мог редактировать чужие курсы
+	result, err := r.db.ExecContext(
+		ctx,
+		query,
+		course.Title,
+		course.Description,
+		course.DifficultyLevel,
+		course.AgeGroup,
+		course.Subject,
+		course.IsPublished,
+		time.Now(),
+		course.ID,
+		course.CreatedBy, // ID Учителя
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update course: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("course not found or permission denied")
+	}
+
 	return nil
 }
 
 func (r *courseRepository) GetByTeacher(ctx context.Context, teacherID int64) ([]*models.Course, error) {
-	// TODO: Implement
-	return nil, nil
+	query := `
+		SELECT 
+			c.id, c.title, c.description, c.created_by,
+			c.difficulty_level, c.age_group, c.subject,
+			c.is_published, c.thumbnail_url, c.created_at, c.updated_at
+		FROM courses c
+		WHERE c.created_by = $1
+		ORDER BY c.created_at DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, teacherID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query teacher courses: %w", err)
+	}
+	defer rows.Close()
+
+	var courses []*models.Course
+	for rows.Next() {
+		course := &models.Course{}
+		err := rows.Scan(
+			&course.ID,
+			&course.Title,
+			&course.Description,
+			&course.CreatedBy,
+			&course.DifficultyLevel,
+			&course.AgeGroup,
+			&course.Subject,
+			&course.IsPublished,
+			&course.ThumbnailURL,
+			&course.CreatedAt,
+			&course.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan teacher course: %w", err)
+		}
+		courses = append(courses, course)
+	}
+
+	return courses, nil
 }
 
 // backend/internal/adapters/postgres/course_repo.go

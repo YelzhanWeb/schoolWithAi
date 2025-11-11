@@ -1,11 +1,12 @@
 package services
 
 import (
-	"backend/internal/domain/models"
-	"backend/internal/ports/repositories"
 	"context"
 	"errors"
 	"fmt"
+
+	"backend/internal/domain/models"
+	"backend/internal/ports/repositories"
 )
 
 type CourseService struct {
@@ -65,4 +66,45 @@ func (s *CourseService) GetModuleResources(ctx context.Context, moduleID int64) 
 // backend/internal/domain/services/course_service.go
 func (s *CourseService) GetResourceByID(ctx context.Context, resourceID int64) (*models.Resource, error) {
 	return s.courseRepo.GetResourceByID(ctx, resourceID)
+}
+
+func (s *CourseService) GetCoursesByTeacher(ctx context.Context, teacherID int64) ([]*models.Course, error) {
+	return s.courseRepo.GetByTeacher(ctx, teacherID)
+}
+
+// CreateCourse создает новый курс
+func (s *CourseService) CreateCourse(ctx context.Context, course *models.Course) error {
+	if err := course.Validate(); err != nil {
+		return err
+	}
+	// Убедимся, что is_published по умолчанию false
+	course.IsPublished = false
+	return s.courseRepo.Create(ctx, course)
+}
+
+// UpdateCourse обновляет курс
+func (s *CourseService) UpdateCourse(ctx context.Context, course *models.Course) error {
+	// Получаем текущий курс, чтобы не перезаписать IsPublished
+	existingCourse, err := s.courseRepo.GetByID(ctx, course.ID)
+	if err != nil {
+		return errors.New("course not found")
+	}
+
+	// Проверяем права
+	if existingCourse.CreatedBy != course.CreatedBy {
+		return errors.New("permission denied")
+	}
+
+	// Обновляем только нужные поля
+	existingCourse.Title = course.Title
+	existingCourse.Description = course.Description
+	existingCourse.DifficultyLevel = course.DifficultyLevel
+	existingCourse.AgeGroup = course.AgeGroup
+	existingCourse.Subject = course.Subject
+
+	if err := existingCourse.Validate(); err != nil {
+		return err
+	}
+
+	return s.courseRepo.Update(ctx, existingCourse)
 }

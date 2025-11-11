@@ -90,6 +90,29 @@ func (s *Server) setupRoutes() {
 			protected.POST("/profile", profileHandler.CreateProfile)
 			protected.GET("/profile", profileHandler.GetMyProfile)
 			protected.PUT("/profile", profileHandler.UpdateMyProfile)
+
+			teacherApi := protected.Group("/teacher")
+			// Добавляем middleware для проверки роли
+			teacherApi.Use(middleware.TeacherAuthMiddleware())
+			{
+				// Используем тот же CourseHandler, что и для /courses,
+				// но создаем для него отдельный хендлер
+				teacherCourseHandler := handlers.NewTeacherCourseHandler(s.courseService)
+
+				// Управление курсами
+				teacherApi.GET("/courses", teacherCourseHandler.GetMyCourses)
+				teacherApi.POST("/courses", teacherCourseHandler.CreateCourse)
+				teacherApi.PUT("/courses/:id", teacherCourseHandler.UpdateCourse)
+				// teacherApi.POST("/courses/:id/publish", teacherCourseHandler.PublishCourse)
+
+				// Управление модулями и ресурсами
+				// teacherApi.POST("/modules", teacherCourseHandler.CreateModule)
+				// teacherApi.POST("/resources", teacherCourseHandler.CreateResource)
+
+				// Аналитика (пока заглушка)
+				// analyticsHandler := handlers.NewTeacherAnalyticsHandler(s.analyticsService)
+				// teacherApi.GET("/analytics/dashboard", analyticsHandler.GetDashboardStats)
+			}
 		}
 
 		// backend/internal/adapters/http/server.go
