@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактор курса - OqysAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body class="bg-gray-50">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-indigo-600">🎓 OqysAI (Учитель)</h1>
+                <div class="flex items-center space-x-2">
+                    <span class="text-gray-700" id="userName">...</span>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-700">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <a href="./teacher-courses.html" class="text-gray-600 hover:text-indigo-600 mb-6 inline-block">
+            ← Назад к курсам
+        </a>
+
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h1 id="formTitle" class="text-3xl font-bold text-gray-800 mb-6">Создание нового курса</h1>
+
+            <form id="courseForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-semibold mb-2" for="title">Название курса</label>
+                    <input type="text" id="title" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Например, 'Основы алгебры'">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-semibold mb-2" for="subject">Предмет</label>
+                    <input type="text" id="subject" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Например, 'mathematics'">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2" for="description">Описание курса</label>
+                    <textarea id="description" rows="4"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Краткое описание того, чему научатся ученики"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2" for="difficulty">Сложность</label>
+                        <select id="difficulty" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <option value="1">1 - Легко</option>
+                            <option value="2">2 - Начальный</option>
+                            <option value="3" selected>3 - Средний</option>
+                            <option value="4">4 - Сложный</option>
+                            <option value="5">5 - Эксперт</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2" for="ageGroup">Возрастная группа</label>
+                        <select id="ageGroup" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <option value="junior">Младшие (1-4)</option>
+                            <option value="middle" selected>Средние (5-8)</option>
+                            <option value="senior">Старшие (9-11)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="errorMessage" class="hidden mb-4 p-3 bg-red-100 text-red-700 rounded-lg"></div>
+
+                <button type="submit" id="submitButton"
+                    class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                    Создать курс
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Защита страницы
+        if (!protectPage() || !isTeacher()) {
+            logout();
+        }
+
+        const user = getCurrentUser();
+        document.getElementById('userName').textContent = user.full_name;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseId = urlParams.get('id');
+        const isEditMode = Boolean(courseId);
+
+        const form = document.getElementById('courseForm');
+        const titleEl = document.getElementById('title');
+        const subjectEl = document.getElementById('subject');
+        const descriptionEl = document.getElementById('description');
+        const difficultyEl = document.getElementById('difficulty');
+        const ageGroupEl = document.getElementById('ageGroup');
+        const errorEl = document.getElementById('errorMessage');
+
+        // Загрузка данных, если это режим редактирования
+        async function loadCourseForEdit() {
+            if (!isEditMode) return;
+
+            document.getElementById('formTitle').textContent = 'Редактирование курса';
+            document.getElementById('submitButton').textContent = 'Сохранить изменения';
+
+            try {
+                // Мы можем использовать публичный API для получения данных курса
+                const response = await API.courses.getById(courseId);
+                const course = response.data.course;
+
+                // Заполняем форму
+                titleEl.value = course.title;
+                subjectEl.value = course.subject;
+                descriptionEl.value = course.description;
+                difficultyEl.value = course.difficulty_level;
+                ageGroupEl.value = course.age_group;
+
+            } catch (error) {
+                console.error('Ошибка загрузки курса:', error);
+                errorEl.textContent = 'Не удалось загрузить данные курса. Вы будете перенаправлены.';
+                errorEl.classList.remove('hidden');
+                setTimeout(() => window.location.href = './teacher-courses.html', 2000);
+            }
+        }
+
+        // Обработка отправки формы
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorEl.classList.add('hidden');
+
+            const courseData = {
+                title: titleEl.value,
+                subject: subjectEl.value,
+                description: descriptionEl.value,
+                difficulty_level: parseInt(difficultyEl.value),
+                age_group: ageGroupEl.value,
+            };
+
+            try {
+                if (isEditMode) {
+                    // РЕЖИМ ОБНОВЛЕНИЯ
+                    await API.teacher.updateCourse(courseId, courseData);
+                    showToast('Курс успешно обновлен!');
+                } else {
+                    // РЕЖИМ СОЗДАНИЯ
+                    await API.teacher.createCourse(courseData);
+                    showToast('Курс успешно создан!');
+                }
+
+                // Возвращаемся к списку курсов
+                window.location.href = './teacher-courses.html';
+
+            } catch (error) {
+                console.error('Ошибка сохранения:', error);
+                errorEl.textContent = error.response?.data?.error || 'Произошла ошибка при сохранении';
+                errorEl.classList.remove('hidden');
+            }
+        });
+
+        loadCourseForEdit();
+    </script>
+</body>
+
+</html>

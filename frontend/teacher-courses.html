@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои курсы - OqysAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body class="bg-gray-50">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-indigo-600">🎓 OqysAI (Учитель)</h1>
+                <div class="flex items-center space-x-6">
+                    <a href="./teacher-dashboard.html" class="text-gray-600 hover:text-indigo-600">Дашборд</a>
+                    <a href="./teacher-courses.html" class="text-indigo-600 font-semibold">Мои курсы</a>
+                    <a href="./teacher-analytics.html" class="text-gray-600 hover:text-indigo-600">Аналитика</a>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-gray-700" id="userName">Загрузка...</span>
+                        <button onclick="logout()" class="text-red-600 hover:text-red-700">Выйти</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">📚 Мои курсы</h2>
+                <p class="text-gray-600">Управление созданными курсами</p>
+            </div>
+            <a href="./teacher-edit-course.html"
+                class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold">
+                + Создать новый курс
+            </a>
+        </div>
+
+        <div id="coursesList" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Защита страницы
+        if (!protectPage() || !isTeacher()) {
+            if (isStudent()) {
+                window.location.href = './dashboard.html';
+            } else {
+                logout();
+            }
+        }
+
+        const user = getCurrentUser();
+        document.getElementById('userName').textContent = user.full_name;
+
+        // Загрузка курсов
+        async function loadCourses() {
+            const listEl = document.getElementById('coursesList');
+            showLoading('coursesList'); // Показываем спиннер
+
+            try {
+                const response = await API.teacher.getMyCourses();
+                const courses = response.data.courses || [];
+
+                if (courses.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="col-span-3 bg-white p-8 rounded-lg shadow text-center">
+                            <p class="text-gray-500">Вы еще не создали ни одного курса.</p>
+                            <a href="./teacher-edit-course.html" 
+                               class="mt-4 inline-block px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                                Создать свой первый курс
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                displayCourses(courses);
+            } catch (error) {
+                console.error('Ошибка загрузки курсов:', error);
+                showError('coursesList', 'Не удалось загрузить курсы');
+            }
+        }
+
+        // Отображение курсов
+        function displayCourses(courses) {
+            const listEl = document.getElementById('coursesList');
+
+            listEl.innerHTML = courses.map(course => {
+                const difficulty = getDifficultyBadge(course.difficulty_level || 3);
+                const status = course.is_published
+                    ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Опубликован</span>'
+                    : '<span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">Черновик</span>';
+
+                return `
+                <div class="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+                    <div class="p-6 flex-grow">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded">
+                                ${course.subject || 'Предмет'}
+                            </span>
+                            ${status}
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">${course.title}</h3>
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow">${course.description || 'Нет описания'}</p>
+                        ${difficulty}
+                    </div>
+                    <div class="p-4 bg-gray-50 border-t">
+                        <a href="./teacher-edit-course.html?id=${course.id}" 
+                           class="block w-full text-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                            Редактировать →
+                        </a>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        loadCourses();
+    </script>
+</body>
+
+</html>

@@ -166,8 +166,11 @@
 
                 if (response.data.user.role === 'student') {
                     window.location.href = './dashboard.html';
+                } else if (response.data.user.role === 'teacher') {
+                    window.location.href = './teacher-dashboard.html';
                 } else {
-                    window.location.href = './teacher.html';
+                    console.log('Logged in as admin');
+                    window.location.href = './admin.html'; // или admin.html
                 }
             } catch (error) {
                 errorDiv.textContent = error.response?.data?.error || 'Ошибка входа';

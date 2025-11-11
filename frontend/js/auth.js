@@ -12,7 +12,7 @@ function isStudent() {
 // Check if user is teacher
 function isTeacher() {
     const user = getCurrentUser();
-    return user && user.role === 'teacher';
+    return user && (user.role === 'teacher' || user.role === 'admin');
 }
 
 // Logout

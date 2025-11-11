@@ -106,5 +106,25 @@ resources: {
         
         update: (data) => 
             createAxiosInstance().post('/progress', data)
+    },
+
+    teacher: {
+        getMyCourses: () =>
+            createAxiosInstance().get('/api/teacher/courses'),
+        
+        createCourse: (courseData) =>
+            createAxiosInstance().post('/api/teacher/courses', courseData),
+
+        updateCourse: (courseId, courseData) =>
+            createAxiosInstance().put(`/api/teacher/courses/${courseId}`, courseData),
+
+        createModule: (moduleData) =>
+            createAxiosInstance().post('/api/teacher/modules', moduleData),
+
+        createResource: (resourceData) =>
+            createAxiosInstance().post('/api/teacher/resources', resourceData),
+        
+        getDashboardStats: () =>
+            createAxiosInstance().get('/api/teacher/analytics/dashboard')
     }
 };
