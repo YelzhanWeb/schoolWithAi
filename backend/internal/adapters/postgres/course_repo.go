@@ -137,13 +137,17 @@ func (r *courseRepository) GetModules(ctx context.Context, courseID int64) ([]*m
 
 func (r *courseRepository) GetResources(ctx context.Context, moduleID int64) ([]*models.Resource, error) {
 	query := `
-		SELECT 
-			id, module_id, title, content, resource_type, 
-			difficulty, estimated_time, file_url, thumbnail_url,
-			created_at, updated_at
-		FROM resources
-		WHERE module_id = $1
-	`
+	SELECT 
+		id, module_id, title,
+		COALESCE(content, '') AS content,
+		resource_type, 
+		difficulty, estimated_time,
+		COALESCE(file_url, '') AS file_url,
+		COALESCE(thumbnail_url, '') AS thumbnail_url,
+		created_at, updated_at
+	FROM resources
+	WHERE module_id = $1
+`
 
 	rows, err := r.db.QueryContext(ctx, query, moduleID)
 	if err != nil {
@@ -171,6 +175,10 @@ func (r *courseRepository) GetResources(ctx context.Context, moduleID int64) ([]
 			return nil, fmt.Errorf("failed to scan resource: %w", err)
 		}
 		resources = append(resources, resource)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
 	}
 
 	return resources, nil
