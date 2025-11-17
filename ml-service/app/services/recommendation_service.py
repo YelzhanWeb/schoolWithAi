@@ -12,7 +12,6 @@ class RecommendationService:
         self.content_based = ContentBasedFiltering(db)
         self.knowledge_based = KnowledgeBasedFiltering(db)
 
-    # --- HYBRID ---
     def get_hybrid_recommendations(self, student_id: int, top_n: int = 10):
         recs = self.hybrid.recommend(student_id, top_n)
         self.hybrid.save_recommendations(student_id, recs)
