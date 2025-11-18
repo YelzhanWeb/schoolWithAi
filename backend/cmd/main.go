@@ -29,7 +29,6 @@ func main() {
 
 	cfg := loadConfig()
 
-	// Проверка JWT_SECRET
 	if cfg.JWTSecret == "" || cfg.JWTSecret == "your-secret-key-change-this" {
 		log.Fatal("❌ JWT_SECRET must be set and should not use default value")
 	}
@@ -125,7 +124,7 @@ type Config struct {
 }
 
 func loadConfig() Config {
-	jwtSecret := getEnv("JWT_SECRET", "")
+	jwtSecret := getEnv("JWT_SECRET", "secret")
 
 	return Config{
 		DBHost:     getEnv("DB_HOST", "localhost"),

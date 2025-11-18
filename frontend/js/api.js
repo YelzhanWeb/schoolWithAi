@@ -108,23 +108,27 @@ resources: {
             createAxiosInstance().post('/progress', data)
     },
 
+    // frontend/js/api.js
+
+    // ...
     teacher: {
         getMyCourses: () =>
-            createAxiosInstance().get('/api/teacher/courses'),
+            createAxiosInstance().get('/teacher/courses'), // <--- Исправлено
         
         createCourse: (courseData) =>
-            createAxiosInstance().post('/api/teacher/courses', courseData),
+            createAxiosInstance().post('/teacher/courses', courseData), // <--- Исправлено
 
         updateCourse: (courseId, courseData) =>
-            createAxiosInstance().put(`/api/teacher/courses/${courseId}`, courseData),
+            createAxiosInstance().put(`/teacher/courses/${courseId}`, courseData), // <--- Исправлено
 
         createModule: (moduleData) =>
-            createAxiosInstance().post('/api/teacher/modules', moduleData),
+            createAxiosInstance().post('/teacher/modules', moduleData), // <--- Исправлено
 
         createResource: (resourceData) =>
-            createAxiosInstance().post('/api/teacher/resources', resourceData),
+            createAxiosInstance().post('/teacher/resources', resourceData), // <--- Исправлено
         
         getDashboardStats: () =>
-            createAxiosInstance().get('/api/teacher/analytics/dashboard')
+            createAxiosInstance().get('/teacher/analytics/dashboard') // <--- Исправлено
     }
+// ...
 };
