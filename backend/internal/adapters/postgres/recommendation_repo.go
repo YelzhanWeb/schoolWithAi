@@ -1,12 +1,13 @@
 package postgre
 
 import (
-	"backend/internal/domain/models"
-	"backend/internal/ports/repositories"
 	"context"
 	"database/sql"
 	"fmt"
 	"time"
+
+	"backend/internal/domain/models"
+	"backend/internal/ports/repositories"
 )
 
 type recommendationRepository struct {
@@ -20,14 +21,14 @@ func NewRecommendationRepository(db *sql.DB) repositories.CourseRecommendationRe
 func (r *recommendationRepository) GetByStudent(ctx context.Context, studentID int64, limit int) ([]*models.CourseRecommendation, error) {
 	query := `
 		SELECT
-    cr.id, cr.student_id, cr.course_id, cr.score,
-    cr.reason, cr.algorithm_type, cr.is_viewed, cr.created_at,
-    c.title -- Добавлено поле title из таблицы courses
-FROM course_recommendations cr -- Изменено
-JOIN courses c ON cr.course_id = c.id -- Добавлен JOIN
-WHERE cr.student_id = $1
-ORDER BY cr.score DESC, cr.created_at DESC
-LIMIT $2
+			cr.id, cr.student_id, cr.course_id, cr.score,
+			cr.reason, cr.algorithm_type, cr.is_viewed, cr.created_at,
+			c.title
+		FROM course_recommendations cr
+		JOIN courses c ON cr.course_id = c.id
+		WHERE cr.student_id = $1
+		ORDER BY cr.score DESC, cr.created_at DESC
+		LIMIT $2
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, studentID, limit)
@@ -63,14 +64,14 @@ LIMIT $2
 
 func (r *recommendationRepository) Save(ctx context.Context, recommendations []*models.CourseRecommendation) error {
 	query := `
-		INSERT INTO course_recommendations -- Изменено
-    (student_id, course_id, score, reason, algorithm_type, is_viewed, created_at) -- Изменено
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT (student_id, course_id) DO UPDATE -- Изменено
-SET score = EXCLUDED.score,
-    reason = EXCLUDED.reason,
-    algorithm_type = EXCLUDED.algorithm_type,
-    created_at = EXCLUDED.created_at
+		INSERT INTO course_recommendations
+			(student_id, course_id, score, reason, algorithm_type, is_viewed, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (student_id, course_id) DO UPDATE
+		SET score = EXCLUDED.score,
+			reason = EXCLUDED.reason,
+			algorithm_type = EXCLUDED.algorithm_type,
+			created_at = EXCLUDED.created_at
 	`
 
 	for _, rec := range recommendations {
@@ -104,14 +105,16 @@ func (r *recommendationRepository) MarkAsViewed(ctx context.Context, recommendat
 	return nil
 }
 
+// DeleteOld ИСПРАВЛЕНО: убран SQL injection через fmt.Sprintf
 func (r *recommendationRepository) DeleteOld(ctx context.Context, studentID int64, olderThanDays int) error {
+	// ПРАВИЛЬНЫЙ способ: используем параметризованный запрос
 	query := `
-		DELETE FROM course_recommendations -- Изменено
-WHERE student_id = $1
-  AND created_at < NOW() - INTERVAL '%d days'
+		DELETE FROM course_recommendations
+		WHERE student_id = $1
+		  AND created_at < NOW() - ($2 || ' days')::INTERVAL
 	`
 
-	_, err := r.db.ExecContext(ctx, fmt.Sprintf(query, olderThanDays), studentID)
+	_, err := r.db.ExecContext(ctx, query, studentID, olderThanDays)
 	if err != nil {
 		return fmt.Errorf("failed to delete old recommendations: %w", err)
 	}

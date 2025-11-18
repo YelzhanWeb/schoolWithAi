@@ -1,6 +1,9 @@
 package http
 
 import (
+	"context"
+	"net/http"
+
 	"backend/internal/adapters/http/handlers"
 	"backend/internal/adapters/http/middleware"
 	"backend/internal/domain/services"
@@ -11,11 +14,13 @@ import (
 
 type Server struct {
 	router                *gin.Engine
+	httpServer            *http.Server
 	authService           *services.AuthService
 	courseService         *services.CourseService
 	recommendationService *services.RecommendationService
-	progressService       *services.ProgressService // НОВОЕ
-	profileService        *services.ProfileService  // НОВОЕ
+	progressService       *services.ProgressService
+	profileService        *services.ProfileService
+	teacherService        *services.TeacherService
 	jwtManager            *jwt.JWTManager
 	mlServiceURL          string
 }
@@ -24,8 +29,9 @@ func NewServer(
 	authService *services.AuthService,
 	courseService *services.CourseService,
 	recommendationService *services.RecommendationService,
-	progressService *services.ProgressService, // НОВОЕ
-	profileService *services.ProfileService, // НОВОЕ
+	progressService *services.ProgressService,
+	profileService *services.ProfileService,
+	teacherService *services.TeacherService,
 	jwtSecret string,
 	mlServiceURL string,
 ) *Server {
@@ -37,8 +43,9 @@ func NewServer(
 		authService:           authService,
 		courseService:         courseService,
 		recommendationService: recommendationService,
-		progressService:       progressService, // НОВОЕ
-		profileService:        profileService,  // НОВОЕ
+		progressService:       progressService,
+		profileService:        profileService,
+		teacherService:        teacherService,
 		jwtManager:            jwt.NewJWTManager(jwtSecret),
 		mlServiceURL:          mlServiceURL,
 	}
@@ -70,6 +77,10 @@ func (s *Server) setupRoutes() {
 		api.GET("/courses/:id", courseHandler.GetCourse)
 		api.GET("/modules/:id/resources", courseHandler.GetModuleResources)
 
+		// // Resources (public)
+		// resourceHandler := handlers.NewResourceHandler(s.courseService)
+		// api.GET("/resources/:id", resourceHandler.GetResource)
+
 		// Protected routes
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(s.jwtManager))
@@ -79,48 +90,64 @@ func (s *Server) setupRoutes() {
 			protected.GET("/recommendations", recHandler.GetRecommendations)
 			protected.POST("/recommendations/refresh", recHandler.RefreshRecommendations)
 
-			// Progress (НОВОЕ)
+			// Progress
 			progressHandler := handlers.NewProgressHandler(s.progressService)
 			protected.POST("/progress", progressHandler.UpdateProgress)
 			protected.GET("/progress", progressHandler.GetMyProgress)
 			protected.GET("/progress/statistics", progressHandler.GetMyStatistics)
 
-			// Profile (НОВОЕ)
+			// Profile
 			profileHandler := handlers.NewProfileHandler(s.profileService)
 			protected.POST("/profile", profileHandler.CreateProfile)
 			protected.GET("/profile", profileHandler.GetMyProfile)
 			protected.PUT("/profile", profileHandler.UpdateMyProfile)
 
+			// ========================================
+			// TEACHER ROUTES
+			// ========================================
 			teacherApi := protected.Group("/teacher")
-			// Добавляем middleware для проверки роли
 			teacherApi.Use(middleware.TeacherAuthMiddleware())
 			{
-				// Используем тот же CourseHandler, что и для /courses,
-				// но создаем для него отдельный хендлер
-				teacherCourseHandler := handlers.NewTeacherCourseHandler(s.courseService)
+				teacherHandler := handlers.NewTeacherHandler(s.courseService, s.teacherService)
 
-				// Управление курсами
-				teacherApi.GET("/courses", teacherCourseHandler.GetMyCourses)
-				teacherApi.POST("/courses", teacherCourseHandler.CreateCourse)
-				teacherApi.PUT("/courses/:id", teacherCourseHandler.UpdateCourse)
-				// teacherApi.POST("/courses/:id/publish", teacherCourseHandler.PublishCourse)
+				// Dashboard & Statistics
+				teacherApi.GET("/dashboard", teacherHandler.GetDashboard)
+				teacherApi.GET("/courses/:id/statistics", teacherHandler.GetCourseStatistics)
+				teacherApi.GET("/courses/:id/students", teacherHandler.GetCourseStudents)
 
-				// Управление модулями и ресурсами
-				// teacherApi.POST("/modules", teacherCourseHandler.CreateModule)
-				// teacherApi.POST("/resources", teacherCourseHandler.CreateResource)
+				// Course Management
+				teacherApi.GET("/courses", teacherHandler.GetMyCourses)
+				teacherApi.POST("/courses", teacherHandler.CreateCourse)
+				teacherApi.PUT("/courses/:id", teacherHandler.UpdateCourse)
+				teacherApi.DELETE("/courses/:id", teacherHandler.DeleteCourse)
+				teacherApi.POST("/courses/:id/publish", teacherHandler.PublishCourse)
+				teacherApi.POST("/courses/:id/unpublish", teacherHandler.UnpublishCourse)
 
-				// Аналитика (пока заглушка)
-				// analyticsHandler := handlers.NewTeacherAnalyticsHandler(s.analyticsService)
-				// teacherApi.GET("/analytics/dashboard", analyticsHandler.GetDashboardStats)
+				// Module Management
+				teacherApi.POST("/modules", teacherHandler.CreateModule)
+				teacherApi.PUT("/modules/:id", teacherHandler.UpdateModule)
+				teacherApi.DELETE("/modules/:id", teacherHandler.DeleteModule)
+
+				// Resource Management
+				teacherApi.POST("/resources", teacherHandler.CreateResource)
+				teacherApi.PUT("/resources/:id", teacherHandler.UpdateResource)
+				teacherApi.DELETE("/resources/:id", teacherHandler.DeleteResource)
 			}
 		}
-
-		// backend/internal/adapters/http/server.go
-		resourceHandler := handlers.NewResourceHandler(s.courseService)
-		api.GET("/resources/:id", resourceHandler.GetResource)
 	}
 }
 
 func (s *Server) Start(port string) error {
-	return s.router.Run(":" + port)
+	s.httpServer = &http.Server{
+		Addr:    ":" + port,
+		Handler: s.router,
+	}
+	return s.httpServer.ListenAndServe()
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.httpServer != nil {
+		return s.httpServer.Shutdown(ctx)
+	}
+	return nil
 }

@@ -1,9 +1,11 @@
 package handlers
 
 import (
-	"backend/internal/domain/services"
+	"log"
 	"net/http"
 	"strconv"
+
+	"backend/internal/domain/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,7 +23,9 @@ func NewCourseHandler(courseService *services.CourseService) *CourseHandler {
 func (h *CourseHandler) GetAllCourses(c *gin.Context) {
 	courses, err := h.courseService.GetAllCourses(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// ИСПРАВЛЕНО: логируем детали, клиенту отдаём общее сообщение
+		log.Printf("Error fetching courses: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch courses"})
 		return
 	}
 
@@ -37,7 +41,8 @@ func (h *CourseHandler) GetCourse(c *gin.Context) {
 
 	course, modules, err := h.courseService.GetCourseDetails(c.Request.Context(), courseID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		log.Printf("Error fetching course %d: %v", courseID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Course not found"})
 		return
 	}
 
@@ -56,7 +61,8 @@ func (h *CourseHandler) GetModuleResources(c *gin.Context) {
 
 	resources, err := h.courseService.GetModuleResources(c.Request.Context(), moduleID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("Error fetching resources for module %d: %v", moduleID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch resources"})
 		return
 	}
 

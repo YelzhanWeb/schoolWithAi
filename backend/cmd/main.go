@@ -1,11 +1,7 @@
 package main
 
 import (
-	"backend/internal/adapters/http"
-	postgre "backend/internal/adapters/postgres"
-	"backend/internal/domain/services"
-	"backend/pkg/jwt"
-	"backend/pkg/ml_client"
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -13,6 +9,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"backend/internal/adapters/http"
+	postgre "backend/internal/adapters/postgres"
+	"backend/internal/domain/services"
+	"backend/pkg/jwt"
+	"backend/pkg/ml_client"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -25,6 +28,11 @@ func main() {
 	flag.Parse()
 
 	cfg := loadConfig()
+
+	// Проверка JWT_SECRET
+	if cfg.JWTSecret == "" || cfg.JWTSecret == "your-secret-key-change-this" {
+		log.Fatal("❌ JWT_SECRET must be set and should not use default value")
+	}
 
 	db, err := connectDB(cfg)
 	if err != nil {
@@ -43,8 +51,9 @@ func main() {
 	userRepo := postgre.NewUserRepository(db)
 	courseRepo := postgre.NewCourseRepository(db)
 	recommendationRepo := postgre.NewRecommendationRepository(db)
-	progressRepo := postgre.NewProgressRepository(db)      // НОВОЕ
-	profileRepo := postgre.NewStudentProfileRepository(db) // НОВОЕ
+	progressRepo := postgre.NewProgressRepository(db)
+	profileRepo := postgre.NewStudentProfileRepository(db)
+	teacherStatsRepo := postgre.NewTeacherStatisticsRepository(db) // НОВОЕ
 
 	// JWT & ML Client
 	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
@@ -55,16 +64,18 @@ func main() {
 	authService := services.NewAuthService(userRepo, jwtManager)
 	courseService := services.NewCourseService(courseRepo)
 	recommendationService := services.NewRecommendationService(recommendationRepo, mlClient)
-	progressService := services.NewProgressService(progressRepo) // НОВОЕ
-	profileService := services.NewProfileService(profileRepo)    // НОВОЕ
+	progressService := services.NewProgressService(progressRepo)
+	profileService := services.NewProfileService(profileRepo)
+	teacherService := services.NewTeacherService(courseRepo, teacherStatsRepo) // НОВОЕ
 
 	// HTTP Server
 	httpServer := http.NewServer(
 		authService,
 		courseService,
 		recommendationService,
-		progressService, // НОВОЕ
-		profileService,  // НОВОЕ
+		progressService,
+		profileService,
+		teacherService, // НОВОЕ
 		cfg.JWTSecret,
 		mlServiceURL,
 	)
@@ -72,19 +83,34 @@ func main() {
 	log.Println("🚀 Starting Education Platform API...")
 	log.Printf("📊 Server running on http://localhost:%s", cfg.ServerPort)
 
+	// Graceful shutdown
+	serverErrors := make(chan error, 1)
 	go func() {
-		if err := httpServer.Start(cfg.ServerPort); err != nil {
-			log.Fatalf("Server error: %v", err)
-		}
+		serverErrors <- httpServer.Start(cfg.ServerPort)
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
 
-	log.Println("🛑 Shutting down server...")
+	select {
+	case err := <-serverErrors:
+		log.Fatalf("Server error: %v", err)
+	case sig := <-quit:
+		log.Printf("Received signal: %s", sig)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := httpServer.Shutdown(ctx); err != nil {
+			log.Printf("Graceful shutdown failed: %v", err)
+			db.Close()
+			log.Fatal("Server forced to shutdown")
+		}
+	}
+
+	log.Println("🛑 Server stopped gracefully")
 	db.Close()
-	log.Println("✅ Server stopped gracefully")
+	log.Println("✅ Database connection closed")
 }
 
 type Config struct {
@@ -99,6 +125,8 @@ type Config struct {
 }
 
 func loadConfig() Config {
+	jwtSecret := getEnv("JWT_SECRET", "")
+
 	return Config{
 		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBPort:     getEnvAsInt("DB_PORT", 5432),
@@ -107,7 +135,7 @@ func loadConfig() Config {
 		DBName:     getEnv("DB_NAME", "education_platform"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
-		JWTSecret:  getEnv("JWT_SECRET", "your-secret-key-change-this"),
+		JWTSecret:  jwtSecret,
 	}
 }
 
