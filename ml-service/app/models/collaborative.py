@@ -4,21 +4,13 @@ from datetime import datetime, timedelta
 
 
 class CollaborativeFiltering:
-    """
-    Collaborative Filtering для КУРСОВ (исправленная версия)
-    - Centered cosine similarity
-    - Обработка cold start
-    - Decay factor для старых оценок
-    - Правильная нормализация scores
-    """
-    
     def __init__(self, db):
         self.db = db
         self.user_course_matrix = None
-        self.user_means = None  # Средние оценки каждого пользователя
+        self.user_means = None 
         self.user_ids = []
         self.course_ids = []
-        self.decay_days = 180  # Оценки старше 180 дней весят меньше
+        self.decay_days = 180 
     
     def build_matrix(self):
         """
@@ -90,7 +82,6 @@ class CollaborativeFiltering:
         user_idx = self.user_ids.index(student_id)
         user_vector = self.user_course_matrix[user_idx].copy()
         
-        # Центрировать вектор (вычесть среднее)
         rated_mask = user_vector > 0
         if not rated_mask.any():
             return []
@@ -133,19 +124,14 @@ class CollaborativeFiltering:
         return similarities[:top_n]
     
     def recommend(self, student_id: int, top_n: int = 10) -> List[Dict]:
-        """
-        Рекомендовать КУРСЫ с правильной нормализацией scores
-        """
         similar_users = self.find_similar_users(student_id, top_n=10)
         
-        # Cold start: если нет похожих пользователей
         if not similar_users:
             return self._get_popular_courses_smart(student_id, top_n)
         
         similar_user_ids = [uid for uid, _ in similar_users]
         similarity_scores = {uid: sim for uid, sim in similar_users}
         
-        # Найти курсы с взвешенными оценками
         query = """
             WITH similar_user_courses AS (
                 SELECT 
