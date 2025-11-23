@@ -1,0 +1,1 @@
+CREATE repo, handle, service for student_interests and subjects

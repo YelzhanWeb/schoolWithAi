@@ -1,13 +1,14 @@
 package ml_client
 
 import (
-	"backend/internal/domain/models"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
+
+	"backend/internal/entities"
 )
 
 type MLClient struct {
@@ -29,7 +30,7 @@ func NewMLClient(baseURL string) *MLClient {
 	}
 }
 
-func (c *MLClient) GetHybridRecommendations(studentID int64, topN int) ([]*models.RecommendationResponse, error) {
+func (c *MLClient) GetHybridRecommendations(studentID int64, topN int) ([]*entities.RecommendationResponse, error) {
 	reqBody := recommendationRequest{
 		StudentID: studentID,
 		TopN:      topN,
@@ -52,7 +53,7 @@ func (c *MLClient) GetHybridRecommendations(studentID int64, topN int) ([]*model
 		return nil, fmt.Errorf("ML service error (%d): %s", resp.StatusCode, string(body))
 	}
 
-	var recommendations []*models.RecommendationResponse
+	var recommendations []*entities.RecommendationResponse
 	if err := json.NewDecoder(resp.Body).Decode(&recommendations); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}

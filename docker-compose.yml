@@ -31,33 +31,33 @@ services:
       - ./backend/db/migrations:/migrations
     command: ["goose", "-dir", "/migrations", "up"]
     restart: on-failure
-  
-  ml-service:
-    build:
-      context: ./ml-service
-      dockerfile: Dockerfile
-    container_name: education_ml
-    restart: unless-stopped
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: education_platform
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-    ports:
-      - "5000:5000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./ml-service/app:/app/app
     networks:
       - education_network
+  
+  # ml-service:
+  #   build:
+  #     context: ./ml-service
+  #     dockerfile: Dockerfile
+  #   container_name: education_ml
+  #   restart: unless-stopped
+  #   environment:
+  #     DB_HOST: postgres
+  #     DB_PORT: 5432
+  #     DB_NAME: education_platform
+  #     DB_USER: postgres
+  #     DB_PASSWORD: postgres
+  #   ports:
+  #     - "5000:5000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./ml-service/app:/app/app
+  #   networks:
+  #     - education_network
 
 volumes:
   postgres_data:
-    driver: local
-  pgadmin_data:
     driver: local
 
 networks:

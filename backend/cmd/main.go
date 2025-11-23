@@ -2,9 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -13,21 +10,16 @@ import (
 
 	"backend/config"
 	"backend/internal/adapters/http"
+	ml_client "backend/internal/adapters/ml-client"
 	postgre "backend/internal/adapters/postgres"
 	"backend/internal/services"
 	"backend/pkg/jwt"
-	"backend/pkg/ml_client"
 
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	migrateFlag := flag.String("migrate", "", "Run migrations: up or down")
-	flag.Parse()
-
 	cfg := config.LoadConfig()
 
 	if cfg.JWTSecret == "" || cfg.JWTSecret == "your-secret-key-change-this" {
@@ -41,11 +33,6 @@ func main() {
 	defer db.Close()
 
 	log.Println("✅ Database connection established")
-
-	if *migrateFlag != "" {
-		handleMigrations(db, *migrateFlag)
-		return
-	}
 
 	// Repositories
 	userRepo := postgre.NewUserRepository(db)
@@ -111,35 +98,4 @@ func main() {
 	log.Println("🛑 Server stopped gracefully")
 	db.Close()
 	log.Println("✅ Database connection closed")
-}
-
-func handleMigrations(db *sql.DB, command string) {
-	migrationsPath := "./migrations"
-
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		log.Fatalf("Failed to create driver: %v", err)
-	}
-
-	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", migrationsPath),
-		"postgres",
-		driver,
-	)
-	if err != nil {
-		log.Fatalf("Failed to create migrate: %v", err)
-	}
-
-	switch command {
-	case "up":
-		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			log.Fatalf("Migration up failed: %v", err)
-		}
-		log.Println("✅ Migrations completed")
-	case "down":
-		if err := m.Steps(-1); err != nil {
-			log.Fatalf("Migration down failed: %v", err)
-		}
-		log.Println("✅ Rollback completed")
-	}
 }
