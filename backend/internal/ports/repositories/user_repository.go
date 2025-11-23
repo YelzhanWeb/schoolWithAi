@@ -1,8 +1,9 @@
 package repositories
 
 import (
-	"backend/internal/domain/models"
 	"context"
+
+	models "backend/internal/entities"
 )
 
 // UserRepository defines the interface for user data access

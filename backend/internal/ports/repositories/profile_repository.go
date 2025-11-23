@@ -1,8 +1,9 @@
 package repositories
 
 import (
-	"backend/internal/domain/models"
 	"context"
+
+	models "backend/internal/entities"
 )
 
 // StudentProfileRepository - интерфейс для работы с профилем студента

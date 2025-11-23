@@ -11,9 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"backend/config"
 	"backend/internal/adapters/http"
 	postgre "backend/internal/adapters/postgres"
-	"backend/internal/domain/services"
+	"backend/internal/services"
 	"backend/pkg/jwt"
 	"backend/pkg/ml_client"
 
@@ -27,13 +28,13 @@ func main() {
 	migrateFlag := flag.String("migrate", "", "Run migrations: up or down")
 	flag.Parse()
 
-	cfg := loadConfig()
+	cfg := config.LoadConfig()
 
 	if cfg.JWTSecret == "" || cfg.JWTSecret == "your-secret-key-change-this" {
 		log.Fatal("❌ JWT_SECRET must be set and should not use default value")
 	}
 
-	db, err := connectDB(cfg)
+	db, err := config.ConnectDB(cfg)
 	if err != nil {
 		log.Fatalf("❌ Failed to connect to database: %v", err)
 	}
@@ -56,7 +57,7 @@ func main() {
 
 	// JWT & ML Client
 	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
-	mlServiceURL := getEnv("ML_SERVICE_URL", "http://localhost:5000")
+	mlServiceURL := config.GetEnv("ML_SERVICE_URL", "http://localhost:5000")
 	mlClient := ml_client.NewMLClient(mlServiceURL)
 
 	// Services
@@ -112,50 +113,6 @@ func main() {
 	log.Println("✅ Database connection closed")
 }
 
-type Config struct {
-	DBHost     string
-	DBPort     int
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBSSLMode  string
-	ServerPort string
-	JWTSecret  string
-}
-
-func loadConfig() Config {
-	jwtSecret := getEnv("JWT_SECRET", "secret")
-
-	return Config{
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnvAsInt("DB_PORT", 5432),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", "postgres"),
-		DBName:     getEnv("DB_NAME", "education_platform"),
-		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
-		ServerPort: getEnv("SERVER_PORT", "8080"),
-		JWTSecret:  jwtSecret,
-	}
-}
-
-func connectDB(cfg Config) (*sql.DB, error) {
-	connStr := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode,
-	)
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
 func handleMigrations(db *sql.DB, command string) {
 	migrationsPath := "./migrations"
 
@@ -185,25 +142,4 @@ func handleMigrations(db *sql.DB, command string) {
 		}
 		log.Println("✅ Rollback completed")
 	}
-}
-
-func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		return defaultValue
-	}
-
-	var value int
-	if _, err := fmt.Sscanf(valueStr, "%d", &value); err != nil {
-		return defaultValue
-	}
-	return value
 }

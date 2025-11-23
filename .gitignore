@@ -35,3 +35,5 @@ Thumbs.db
 # Logs
 *.log
 project_code.txt
+
+*.env

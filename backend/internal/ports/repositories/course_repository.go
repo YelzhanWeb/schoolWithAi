@@ -3,7 +3,7 @@ package repositories
 import (
 	"context"
 
-	"backend/internal/domain/models"
+	models "backend/internal/entities"
 )
 
 // CourseRepository - расширенный интерфейс с методами для учителя
