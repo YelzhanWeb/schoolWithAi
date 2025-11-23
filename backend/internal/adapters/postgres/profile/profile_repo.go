@@ -52,20 +52,20 @@ func (r *StudentProfileRepository) Create(ctx context.Context, profile *entities
 	d := newDTO(profile)
 
 	query := `
-		INSERT INTO student_profiles (id, user_id, grade, xp, level, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO student_profiles (
+			id, user_id, grade, xp, level, 
+			current_league_id, weekly_xp, current_streak, max_streak, last_activity_date,
+			created_at, updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
 	_, err := r.pool.Exec(
 		ctx,
 		query,
-		d.ID,
-		d.UserID,
-		d.Grade,
-		d.XP,
-		d.Level,
-		d.CreatedAt,
-		d.UpdatedAt,
+		d.ID, d.UserID, d.Grade, d.XP, d.Level,
+		d.CurrentLeagueID, d.WeeklyXP, d.CurrentStreak, d.MaxStreak, d.LastActivityDate,
+		d.CreatedAt, d.UpdatedAt,
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -84,7 +84,9 @@ func (r *StudentProfileRepository) GetByUserID(ctx context.Context, userID strin
 	}
 
 	query := `
-		SELECT id, user_id, grade, xp, level, created_at, updated_at
+		SELECT id, user_id, grade, xp, level, 
+		       current_league_id, weekly_xp, current_streak, max_streak, last_activity_date,
+		       created_at, updated_at
 		FROM student_profiles
 		WHERE user_id = $1
 	`
@@ -113,7 +115,12 @@ func (r *StudentProfileRepository) Update(ctx context.Context, profile *entities
 		SET grade = $2,
 			xp = $3,
 			level = $4,
-			updated_at = $5
+			current_league_id = $5,
+			weekly_xp = $6,
+			current_streak = $7,
+			max_streak = $8,
+			last_activity_date = $9,
+			updated_at = $10
 		WHERE id = $1
 	`
 
@@ -124,6 +131,11 @@ func (r *StudentProfileRepository) Update(ctx context.Context, profile *entities
 		d.Grade,
 		d.XP,
 		d.Level,
+		d.CurrentLeagueID,
+		d.WeeklyXP,
+		d.CurrentStreak,
+		d.MaxStreak,
+		d.LastActivityDate,
 		d.UpdatedAt,
 	)
 	if err != nil {
@@ -159,9 +171,11 @@ func (r *StudentProfileRepository) GetLeaderboard(ctx context.Context, limit int
 	}
 
 	query := `
-		SELECT id, user_id, grade, xp, level, created_at, updated_at
+		SELECT id, user_id, grade, xp, level, 
+		       current_league_id, weekly_xp, current_streak, max_streak, last_activity_date,
+		       created_at, updated_at
 		FROM student_profiles
-		ORDER BY xp DESC
+		ORDER BY weekly_xp DESC
 		LIMIT $1
 	`
 
@@ -173,6 +187,39 @@ func (r *StudentProfileRepository) GetLeaderboard(ctx context.Context, limit int
 
 	var profiles []*entities.StudentProfile
 
+	for rows.Next() {
+		profile, err := scan(rows)
+		if err != nil {
+			return nil, fmt.Errorf("row scan error: %w", err)
+		}
+		profiles = append(profiles, &profile)
+	}
+
+	return profiles, nil
+}
+
+func (r *StudentProfileRepository) GetLeagueLeaderboard(ctx context.Context, leagueID int, limit int) ([]*entities.StudentProfile, error) {
+	if r.pool == nil {
+		return nil, fmt.Errorf("not connected to pool")
+	}
+
+	query := `
+		SELECT id, user_id, grade, xp, level, 
+		       current_league_id, weekly_xp, current_streak, max_streak, last_activity_date,
+		       created_at, updated_at
+		FROM student_profiles
+		WHERE current_league_id = $1
+		ORDER BY weekly_xp DESC
+		LIMIT $2
+	`
+
+	rows, err := r.pool.Query(ctx, query, leagueID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get league leaderboard: %w", err)
+	}
+	defer rows.Close()
+
+	var profiles []*entities.StudentProfile
 	for rows.Next() {
 		profile, err := scan(rows)
 		if err != nil {
@@ -196,6 +243,11 @@ func scan(scanner rowScanner) (entities.StudentProfile, error) {
 		&d.Grade,
 		&d.XP,
 		&d.Level,
+		&d.CurrentLeagueID,
+		&d.WeeklyXP,
+		&d.CurrentStreak,
+		&d.MaxStreak,
+		&d.LastActivityDate,
 		&d.CreatedAt,
 		&d.UpdatedAt,
 	)
