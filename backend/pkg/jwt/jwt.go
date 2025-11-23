@@ -9,7 +9,7 @@ import (
 )
 
 type Claims struct {
-	UserID int64  `json:"user_id"`
+	UserID string `json:"user_id"`
 	Email  string `json:"email"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
@@ -23,7 +23,7 @@ func NewJWTManager(secretKey string) *JWTManager {
 	return &JWTManager{secretKey: secretKey}
 }
 
-func (m *JWTManager) Generate(userID int64, email, role string) (string, error) {
+func (m *JWTManager) Generate(userID string, email, role string) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		Email:  email,
@@ -45,7 +45,6 @@ func (m *JWTManager) Verify(tokenString string) (*Claims, error) {
 		}
 		return []byte(m.secretKey), nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

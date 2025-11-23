@@ -3,6 +3,7 @@ package entities
 import (
 	"errors"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 )
@@ -27,12 +28,15 @@ type User struct {
 	UpdatedAt    time.Time
 }
 
-func NewUser(email, passwordHash, firstName, lastName, avatarUrl string, role UserRole) (*User, error) {
+func NewUser(email, password, firstName, lastName, avatarUrl string, role UserRole) (*User, error) {
 	if email == "" {
 		return nil, errors.New("email is required")
 	}
-	if passwordHash == "" {
+	if password == "" {
 		return nil, errors.New("password hash is required")
+	}
+	if utf8.RuneCountInString(password) < 8 {
+		return nil, errors.New("possword is less than 8")
 	}
 	if firstName == "" {
 		return nil, errors.New("first name is required")
@@ -51,7 +55,7 @@ func NewUser(email, passwordHash, firstName, lastName, avatarUrl string, role Us
 	return &User{
 		ID:           uuid.NewString(),
 		Email:        email,
-		PasswordHash: passwordHash,
+		PasswordHash: password,
 		FirstName:    firstName,
 		LastName:     lastName,
 		Role:         role,
