@@ -14,7 +14,7 @@ CREATE TABLE courses (
     tags TEXT [], -- Теги для Python ['python', 'backend', 'loops']
     cover_image_url VARCHAR(255),
     is_published BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE modules (

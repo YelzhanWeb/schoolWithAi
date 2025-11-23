@@ -35,6 +35,13 @@ CREATE TABLE student_profiles (
     ),
     xp BIGINT DEFAULT 0 NOT NULL,
     level INTEGER DEFAULT 1 NOT NULL,
+    --Weekly Leaderboard
+    current_league_id INTEGER REFERENCES leagues (id) DEFAULT 1,
+    weekly_xp BIGINT DEFAULT 0 NOT NULL,
+    --Activity
+    current_streak INTEGER DEFAULT 0,
+    max_streak INTEGER DEFAULT 0,
+    last_activity_date DATE DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -43,6 +50,11 @@ CREATE TABLE student_interests (
     user_id TEXT REFERENCES users (id) ON DELETE CASCADE,
     subject_id TEXT REFERENCES subjects (id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, subject_id)
+);
+
+CREATE INDEX idx_league_ranking ON student_profiles (
+    current_league_id,
+    weekly_xp DESC
 );
 
 CREATE INDEX idx_student_profiles_grade ON student_profiles (grade);
