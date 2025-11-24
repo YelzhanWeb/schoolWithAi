@@ -55,7 +55,7 @@ func (s *Server) setupRoutes() {
 		c.Redirect(http.StatusMovedPermanently, "/docs/index.html")
 	})
 
-	api := s.router.Group("/api")
+	api := s.router.Group("/v1")
 	{
 		authHandler := handlers.NewAuthHandler(s.authService)
 

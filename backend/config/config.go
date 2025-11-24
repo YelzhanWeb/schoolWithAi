@@ -23,8 +23,8 @@ func LoadConfig() Config {
 	return Config{
 		DBHost:     GetEnv("DB_HOST", "localhost"),
 		DBPort:     getEnvAsInt("DB_PORT", 5432),
-		DBUser:     GetEnv("DB_USER", "postgres"),
-		DBPassword: GetEnv("DB_PASSWORD", "postgres"),
+		DBUser:     GetEnv("DB_USER", "admin"),
+		DBPassword: GetEnv("DB_PASSWORD", "admin123"),
 		DBName:     GetEnv("DB_NAME", "education_platform"),
 		DBSSLMode:  GetEnv("DB_SSLMODE", "disable"),
 		ServerPort: GetEnv("SERVER_PORT", "8080"),

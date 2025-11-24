@@ -57,7 +57,7 @@ type RegisterResponse struct {
 // @Failure 400 {object} ErrorResponse
 // @Failure 409 {object} ErrorResponse "User already exists"
 // @Failure 500 {object} ErrorResponse
-// @Router /auth/register [post]
+// @Router /v1/auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -118,7 +118,7 @@ type LoginResponse struct {
 // @Success 200 {object} LoginResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /auth/login [post]
+// @Router /v1/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -160,7 +160,7 @@ type ChangePasswordRequest struct {
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse "Unauthorized"
 // @Failure 500 {object} ErrorResponse
-// @Router /auth/change-password [post]
+// @Router /v1/auth/change-password [post]
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

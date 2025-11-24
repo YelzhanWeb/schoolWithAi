@@ -30,6 +30,10 @@ func (r *UserRepository) Connect(ctx context.Context) error {
 
 	r.pool = p
 
+	if err := r.pool.Ping(ctx); err != nil {
+		return fmt.Errorf("database ping failed: %w", err)
+	}
+
 	return nil
 }
 

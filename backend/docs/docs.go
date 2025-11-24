@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/change-password": {
+        "/v1/auth/change-password": {
             "post": {
                 "security": [
                     {
@@ -69,7 +69,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/login": {
+        "/v1/auth/login": {
             "post": {
                 "description": "Authenticate user and return JWT token",
                 "consumes": [
@@ -115,7 +115,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/register": {
+        "/v1/auth/register": {
             "post": {
                 "description": "Register a new user (student or teacher)",
                 "consumes": [
