@@ -36,7 +36,10 @@ func (r *ProgressRepository) UpsertLessonProgress(ctx context.Context, lp *entit
 	return nil
 }
 
-func (r *ProgressRepository) GetLessonProgress(ctx context.Context, userID, lessonID string) (*entities.LessonProgress, error) {
+func (r *ProgressRepository) GetLessonProgress(
+	ctx context.Context,
+	userID, lessonID string,
+) (*entities.LessonProgress, error) {
 	query := `
 		SELECT user_id, lesson_id, status, is_completed, last_accessed_at
 		FROM lesson_progress
@@ -105,7 +108,10 @@ func (r *ProgressRepository) UpsertCourseProgress(ctx context.Context, cp *entit
 	return nil
 }
 
-func (r *ProgressRepository) GetCourseProgress(ctx context.Context, userID, courseID string) (*entities.CourseProgress, error) {
+func (r *ProgressRepository) GetCourseProgress(
+	ctx context.Context,
+	userID, courseID string,
+) (*entities.CourseProgress, error) {
 	query := `
 		SELECT user_id, course_id, completed_lessons_count, total_lessons_count, 
 		       progress_percentage, is_completed, updated_at
@@ -129,7 +135,11 @@ func (r *ProgressRepository) GetCourseProgress(ctx context.Context, userID, cour
 	return d.toEntity(), nil
 }
 
-func (r *ProgressRepository) GetUserActiveCourses(ctx context.Context, userID string, limit int) ([]entities.CourseProgress, error) {
+func (r *ProgressRepository) GetUserActiveCourses(
+	ctx context.Context,
+	userID string,
+	limit int,
+) ([]entities.CourseProgress, error) {
 	query := `
 		SELECT user_id, course_id, completed_lessons_count, total_lessons_count, 
 		       progress_percentage, is_completed, updated_at

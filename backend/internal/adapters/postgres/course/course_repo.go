@@ -47,7 +47,19 @@ func (r *CourseRepository) Create(ctx context.Context, course *entities.Course) 
 		INSERT INTO courses (id, author_id, subject_id, title, description, difficulty_level, cover_image_url, is_published, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
-	_, err = tx.Exec(ctx, query, d.ID, d.AuthorID, d.SubjectID, d.Title, d.Description, d.DifficultyLevel, d.CoverImageURL, d.IsPublished, d.CreatedAt)
+	_, err = tx.Exec(
+		ctx,
+		query,
+		d.ID,
+		d.AuthorID,
+		d.SubjectID,
+		d.Title,
+		d.Description,
+		d.DifficultyLevel,
+		d.CoverImageURL,
+		d.IsPublished,
+		d.CreatedAt,
+	)
 	if err != nil {
 		return fmt.Errorf("create course: %w", err)
 	}
@@ -179,7 +191,12 @@ func (r *CourseRepository) GetAllTags(ctx context.Context) ([]entities.Tag, erro
 	return tags, nil
 }
 
-func (r *CourseRepository) updateCourseTags(ctx context.Context, tx pgx.Tx, courseID string, tags []entities.Tag) error {
+func (r *CourseRepository) updateCourseTags(
+	ctx context.Context,
+	tx pgx.Tx,
+	courseID string,
+	tags []entities.Tag,
+) error {
 	_, err := tx.Exec(ctx, `DELETE FROM course_tags WHERE course_id = $1`, courseID)
 	if err != nil {
 		return fmt.Errorf("clear tags: %w", err)
@@ -292,7 +309,18 @@ func (r *CourseRepository) AddLesson(ctx context.Context, lesson *entities.Lesso
 		INSERT INTO lessons (id, module_id, title, content_text, video_url, file_attachment_url, xp_reward, order_index)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	_, err := r.pool.Exec(ctx, query, d.ID, d.ModuleID, d.Title, d.ContentText, d.VideoURL, d.FileAttachmentURL, d.XPReward, d.OrderIndex)
+	_, err := r.pool.Exec(
+		ctx,
+		query,
+		d.ID,
+		d.ModuleID,
+		d.Title,
+		d.ContentText,
+		d.VideoURL,
+		d.FileAttachmentURL,
+		d.XPReward,
+		d.OrderIndex,
+	)
 	return err
 }
 

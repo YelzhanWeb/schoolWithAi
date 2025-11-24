@@ -35,7 +35,12 @@ func NewAuthService(userRepo UserRepository, jwtManager *jwt.JWTManager, storage
 	}
 }
 
-func (s *AuthService) Register(ctx context.Context, user *entities.User, password string, avatarFile *multipart.FileHeader) error {
+func (s *AuthService) Register(
+	ctx context.Context,
+	user *entities.User,
+	password string,
+	avatarFile *multipart.FileHeader,
+) error {
 	var err error
 	user.PasswordHash, err = s.hashPassword(password)
 	if err != nil {
@@ -89,6 +94,31 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID string, oldPass
 
 	if len(newPassword) < 8 {
 		return errors.New("password must be at least 8 characters")
+	}
+
+	newPasswordHash, err := s.hashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	user.PasswordHash = newPasswordHash
+	user.UpdatedAt = time.Now().UTC()
+
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *AuthService) ResetPassword(ctx context.Context, email, oldPassword, newPassword string) error {
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if !s.verifyPassword(user.PasswordHash, oldPassword) {
+		return entities.ErrInvalidCredentials
+	}
+
+	if len(newPassword) < 8 {
+		return errors.New("new password must be at least 8 characters")
 	}
 
 	newPasswordHash, err := s.hashPassword(newPassword)

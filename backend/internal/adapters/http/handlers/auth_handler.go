@@ -20,6 +20,7 @@ type AuthService interface {
 	Register(ctx context.Context, user *entities.User, password string, avatar *multipart.FileHeader) error
 	Login(ctx context.Context, email, password string) (string, error)
 	ChangePassword(ctx context.Context, userID string, oldPassword, newPassword string) error
+	ResetPassword(ctx context.Context, email, oldPassword, newPassword string) error
 }
 
 type AuthHandler struct {
@@ -31,11 +32,11 @@ func NewAuthHandler(authService AuthService) *AuthHandler {
 }
 
 type RegisterRequest struct {
-	Email     string                `form:"email" binding:"required,email"`
-	Password  string                `form:"password" binding:"required,min=8"`
-	Role      string                `form:"role" binding:"required,oneof=student teacher"`
+	Email     string                `form:"email"      binding:"required,email"`
+	Password  string                `form:"password"   binding:"required,min=8"`
+	Role      string                `form:"role"       binding:"required,oneof=student teacher"`
 	FirstName string                `form:"first_name" binding:"required"`
-	LastName  string                `form:"last_name" binding:"required"`
+	LastName  string                `form:"last_name"  binding:"required"`
 	Avatar    *multipart.FileHeader `form:"avatar"`
 }
 
@@ -107,8 +108,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email" example:"student@example.com"`
-	Password string `json:"password" binding:"required" example:"secret123"`
+	Email    string `json:"email"    binding:"required,email" example:"student@example.com"`
+	Password string `json:"password" binding:"required"       example:"secret123"`
 }
 
 type LoginResponse struct {
@@ -201,5 +202,44 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 	log.Info().Str("user_id", uidStr).Msg("password changed successfully")
 
+	c.Status(http.StatusOK)
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email"        binding:"required,email"`
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
+// ResetPassword godoc
+// @Summary Reset password (public)
+// @Description Change password using email and old password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body ResetPasswordRequest true "Reset password payload"
+// @Success 200
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/auth/reset-password [post]
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid input: " + err.Error()})
+		return
+	}
+
+	err := h.authService.ResetPassword(c.Request.Context(), req.Email, req.OldPassword, req.NewPassword)
+	if err != nil {
+		if errors.Is(err, entities.ErrInvalidCredentials) {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid email or old password"})
+			return
+		}
+		log.Error().Err(err).Str("email", req.Email).Msg("failed to reset password")
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
+		return
+	}
+
+	log.Info().Str("email", req.Email).Msg("password reset successfully")
 	c.Status(http.StatusOK)
 }

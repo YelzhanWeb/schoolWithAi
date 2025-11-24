@@ -64,7 +64,11 @@ func (r *AnalyticsRepository) LogActivity(ctx context.Context, log *entities.Use
 
 // GetUserHistory возвращает последние действия пользователя (например, "Недавно просмотренные").
 // Обычно фильтруем только action_type = 'view' или 'complete'.
-func (r *AnalyticsRepository) GetUserHistory(ctx context.Context, userID string, limit int) ([]*entities.UserActivityLog, error) {
+func (r *AnalyticsRepository) GetUserHistory(
+	ctx context.Context,
+	userID string,
+	limit int,
+) ([]*entities.UserActivityLog, error) {
 	query := `
 		SELECT id, user_id, course_id, action_type, meta_data, created_at
 		FROM user_activity_logs
@@ -104,7 +108,11 @@ func (r *AnalyticsRepository) GetUserHistory(ctx context.Context, userID string,
 
 // GetUserHistoryByAction позволяет получить конкретные действия (например, только "view")
 // Удобно для блока "Вы смотрели"
-func (r *AnalyticsRepository) GetUserHistoryByAction(ctx context.Context, userID, actionType string, limit int) ([]*entities.UserActivityLog, error) {
+func (r *AnalyticsRepository) GetUserHistoryByAction(
+	ctx context.Context,
+	userID, actionType string,
+	limit int,
+) ([]*entities.UserActivityLog, error) {
 	query := `
 		SELECT id, user_id, course_id, action_type, meta_data, created_at
 		FROM user_activity_logs

@@ -47,6 +47,20 @@ definitions:
       role:
         type: string
     type: object
+  internal_adapters_http_handlers.ResetPasswordRequest:
+    properties:
+      email:
+        type: string
+      new_password:
+        minLength: 8
+        type: string
+      old_password:
+        type: string
+    required:
+    - email
+    - new_password
+    - old_password
+    type: object
 info:
   contact: {}
   description: API documentation for the School Backend service.
@@ -172,6 +186,34 @@ paths:
           schema:
             $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
       summary: Register a new user
+      tags:
+      - auth
+  /v1/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Change password using email and old password
+      parameters:
+      - description: Reset password payload
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+      summary: Reset password (public)
       tags:
       - auth
 securityDefinitions:

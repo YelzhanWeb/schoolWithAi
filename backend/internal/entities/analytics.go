@@ -17,7 +17,12 @@ type UserActivityLog struct {
 }
 
 // NewActivityLog создает лог. courseID передаем как *string (или nil).
-func NewActivityLog(userID string, courseID *string, actionType string, metaData map[string]any) (*UserActivityLog, error) {
+func NewActivityLog(
+	userID string,
+	courseID *string,
+	actionType string,
+	metaData map[string]any,
+) (*UserActivityLog, error) {
 	if userID == "" {
 		return nil, errors.New("user_id is required")
 	}

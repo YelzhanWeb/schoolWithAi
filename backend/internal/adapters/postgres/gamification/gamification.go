@@ -75,7 +75,10 @@ func (r *GamificationRepository) GetAllAchievements(ctx context.Context) ([]enti
 	return list, nil
 }
 
-func (r *GamificationRepository) GetUserAchievements(ctx context.Context, userID string) ([]entities.UserAchievement, error) {
+func (r *GamificationRepository) GetUserAchievements(
+	ctx context.Context,
+	userID string,
+) ([]entities.UserAchievement, error) {
 	query := `
 		SELECT ua.user_id, ua.achievement_id, ua.earned_at,
 		       a.slug, a.name, a.description, a.icon_url, a.xp_reward
@@ -142,7 +145,11 @@ func (r *GamificationRepository) SaveHistorySnapshot(ctx context.Context, h *ent
 	return nil
 }
 
-func (r *GamificationRepository) GetHistoryByPeriod(ctx context.Context, start, end time.Time, leagueID int) ([]entities.LeaderboardHistory, error) {
+func (r *GamificationRepository) GetHistoryByPeriod(
+	ctx context.Context,
+	start, end time.Time,
+	leagueID int,
+) ([]entities.LeaderboardHistory, error) {
 	query := `
 		SELECT id, period_start, period_end, user_id, league_id, rank, total_xp, created_at
 		FROM leaderboard_history

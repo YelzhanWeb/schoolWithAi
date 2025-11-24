@@ -198,7 +198,11 @@ func (r *StudentProfileRepository) GetLeaderboard(ctx context.Context, limit int
 	return profiles, nil
 }
 
-func (r *StudentProfileRepository) GetLeagueLeaderboard(ctx context.Context, leagueID int, limit int) ([]*entities.StudentProfile, error) {
+func (r *StudentProfileRepository) GetLeagueLeaderboard(
+	ctx context.Context,
+	leagueID int,
+	limit int,
+) ([]*entities.StudentProfile, error) {
 	if r.pool == nil {
 		return nil, fmt.Errorf("not connected to pool")
 	}
