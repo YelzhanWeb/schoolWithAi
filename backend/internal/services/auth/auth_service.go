@@ -70,7 +70,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID string, oldPass
 	}
 
 	if !s.verifyPassword(user.PasswordHash, oldPassword) {
-		return errors.New("invalid old password")
+		return entities.ErrInvalidCredentials
 	}
 
 	if len(newPassword) < 8 {
@@ -79,7 +79,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID string, oldPass
 
 	newPasswordHash, err := s.hashPassword(newPassword)
 	if err != nil {
-		return errors.New("failed to hash password")
+		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
 	user.PasswordHash = newPasswordHash

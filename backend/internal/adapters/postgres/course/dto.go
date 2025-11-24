@@ -13,10 +13,23 @@ type courseDTO struct {
 	Title           string
 	Description     *string
 	DifficultyLevel int
-	Tags            []string
 	CoverImageURL   *string
 	IsPublished     bool
 	CreatedAt       time.Time
+}
+
+type tagDTO struct {
+	ID   int
+	Name string
+	Slug string
+}
+
+func (d *tagDTO) toEntity() entities.Tag {
+	return entities.Tag{
+		ID:   d.ID,
+		Name: d.Name,
+		Slug: d.Slug,
+	}
 }
 
 func newCourseDTO(c *entities.Course) courseDTO {
@@ -36,7 +49,6 @@ func newCourseDTO(c *entities.Course) courseDTO {
 		Title:           c.Title,
 		Description:     desc,
 		DifficultyLevel: c.DifficultyLevel,
-		Tags:            c.Tags,
 		CoverImageURL:   cover,
 		IsPublished:     c.IsPublished,
 		CreatedAt:       c.CreatedAt,
@@ -50,7 +62,7 @@ func (d *courseDTO) toEntity() *entities.Course {
 		SubjectID:       d.SubjectID,
 		Title:           d.Title,
 		DifficultyLevel: d.DifficultyLevel,
-		Tags:            d.Tags,
+		Tags:            []entities.Tag{},
 		IsPublished:     d.IsPublished,
 		CreatedAt:       d.CreatedAt.UTC(),
 	}
@@ -124,5 +136,19 @@ func (l lessonDTO) toEntity() *entities.Lesson {
 		FileAttachmentURL: *l.FileAttachmentURL,
 		XPReward:          l.XPReward,
 		OrderIndex:        l.OrderIndex,
+	}
+}
+
+type favoriteDTO struct {
+	UserID    string
+	CourseID  string
+	CreatedAt time.Time
+}
+
+func (d *favoriteDTO) toEntity() entities.CourseFavorite {
+	return entities.CourseFavorite{
+		UserID:    d.UserID,
+		CourseID:  d.CourseID,
+		CreatedAt: d.CreatedAt.UTC(),
 	}
 }

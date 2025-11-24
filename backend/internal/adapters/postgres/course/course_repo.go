@@ -37,24 +37,33 @@ func (r *CourseRepository) Close() {
 }
 
 func (r *CourseRepository) Create(ctx context.Context, course *entities.Course) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 	d := newCourseDTO(course)
 	query := `
-		INSERT INTO courses (id, author_id, subject_id, title, description, difficulty_level, tags, cover_image_url, is_published, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO courses (id, author_id, subject_id, title, description, difficulty_level, cover_image_url, is_published, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
-	_, err := r.pool.Exec(ctx, query, d.ID, d.AuthorID, d.SubjectID, d.Title, d.Description, d.DifficultyLevel, d.Tags, d.CoverImageURL, d.IsPublished, d.CreatedAt)
+	_, err = tx.Exec(ctx, query, d.ID, d.AuthorID, d.SubjectID, d.Title, d.Description, d.DifficultyLevel, d.CoverImageURL, d.IsPublished, d.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create course: %w", err)
 	}
-	return nil
+
+	if err := r.updateCourseTags(ctx, tx, course.ID, course.Tags); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (r *CourseRepository) GetByID(ctx context.Context, id string) (*entities.Course, error) {
-	query := `SELECT id, author_id, subject_id, title, description, difficulty_level, tags, cover_image_url, is_published, created_at FROM courses WHERE id = $1`
+	query := `SELECT id, author_id, subject_id, title, description, difficulty_level, cover_image_url, is_published, created_at FROM courses WHERE id = $1`
 
 	var d courseDTO
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&d.ID, &d.AuthorID, &d.SubjectID, &d.Title, &d.Description, &d.DifficultyLevel, &d.Tags, &d.CoverImageURL, &d.IsPublished, &d.CreatedAt,
+		&d.ID, &d.AuthorID, &d.SubjectID, &d.Title, &d.Description, &d.DifficultyLevel, &d.CoverImageURL, &d.IsPublished, &d.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -62,10 +71,24 @@ func (r *CourseRepository) GetByID(ctx context.Context, id string) (*entities.Co
 		}
 		return nil, fmt.Errorf("get course: %w", err)
 	}
-	return d.toEntity(), nil
+	course := d.toEntity()
+
+	tags, err := r.getTagsByCourseID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get tags: %w", err)
+	}
+	course.Tags = tags
+
+	return course, nil
 }
 
 func (r *CourseRepository) UpdateCourse(ctx context.Context, course *entities.Course) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
 	d := newCourseDTO(course)
 
 	query := `
@@ -73,9 +96,8 @@ func (r *CourseRepository) UpdateCourse(ctx context.Context, course *entities.Co
         SET title = $2, 
             description = $3, 
             difficulty_level = $4, 
-            tags = $5, 
-            cover_image_url = $6, 
-            is_published = $7
+            cover_image_url = $5, 
+            is_published = $6
         WHERE id = $1
     `
 
@@ -86,7 +108,6 @@ func (r *CourseRepository) UpdateCourse(ctx context.Context, course *entities.Co
 		d.Title,
 		d.Description,
 		d.DifficultyLevel,
-		d.Tags,
 		d.CoverImageURL,
 		d.IsPublished,
 	)
@@ -96,6 +117,10 @@ func (r *CourseRepository) UpdateCourse(ctx context.Context, course *entities.Co
 
 	if tag.RowsAffected() == 0 {
 		return entities.ErrNotFound
+	}
+
+	if err := r.updateCourseTags(ctx, tx, course.ID, course.Tags); err != nil {
+		return err
 	}
 
 	return nil
@@ -114,6 +139,88 @@ func (r *CourseRepository) DeleteCourse(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (r *CourseRepository) CreateTag(ctx context.Context, name, slug string) (*entities.Tag, error) {
+	query := `
+		INSERT INTO tags (name, slug) 
+		VALUES ($1, $2) 
+		ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+		RETURNING id, name, slug
+	`
+
+	var t tagDTO
+	err := r.pool.QueryRow(ctx, query, name, slug).Scan(&t.ID, &t.Name, &t.Slug)
+	if err != nil {
+		return nil, fmt.Errorf("create tag: %w", err)
+	}
+
+	tag := t.toEntity()
+	return &tag, nil
+}
+
+func (r *CourseRepository) GetAllTags(ctx context.Context) ([]entities.Tag, error) {
+	query := `SELECT id, name, slug FROM tags ORDER BY name ASC`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get all tags: %w", err)
+	}
+	defer rows.Close()
+
+	var tags []entities.Tag
+	for rows.Next() {
+		var t tagDTO
+		if err := rows.Scan(&t.ID, &t.Name, &t.Slug); err != nil {
+			return nil, err
+		}
+		tags = append(tags, t.toEntity())
+	}
+	return tags, nil
+}
+
+func (r *CourseRepository) updateCourseTags(ctx context.Context, tx pgx.Tx, courseID string, tags []entities.Tag) error {
+	_, err := tx.Exec(ctx, `DELETE FROM course_tags WHERE course_id = $1`, courseID)
+	if err != nil {
+		return fmt.Errorf("clear tags: %w", err)
+	}
+
+	if len(tags) == 0 {
+		return nil
+	}
+
+	query := `INSERT INTO course_tags (course_id, tag_id) VALUES ($1, $2)`
+	for _, t := range tags {
+		_, err := tx.Exec(ctx, query, courseID, t.ID)
+		if err != nil {
+			return fmt.Errorf("link tag %d: %w", t.ID, err)
+		}
+	}
+	return nil
+}
+
+func (r *CourseRepository) getTagsByCourseID(ctx context.Context, courseID string) ([]entities.Tag, error) {
+	query := `
+		SELECT t.id, t.name, t.slug 
+		FROM tags t
+		JOIN course_tags ct ON t.id = ct.tag_id
+		WHERE ct.course_id = $1
+	`
+	rows, err := r.pool.Query(ctx, query, courseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []entities.Tag
+	for rows.Next() {
+		var t tagDTO
+		if err := rows.Scan(&t.ID, &t.Name, &t.Slug); err != nil {
+			return nil, err
+		}
+		tags = append(tags, t.toEntity())
+	}
+	return tags, nil
 }
 
 func (r *CourseRepository) AddModule(ctx context.Context, module *entities.Module) error {
@@ -351,6 +458,76 @@ func (r *CourseRepository) GetCourseStructure(ctx context.Context, courseID stri
 	}
 
 	return modules, nil
+}
+
+func (r *CourseRepository) ToggleFavorite(ctx context.Context, userID, courseID string) (bool, error) {
+	existsQuery := `SELECT EXISTS(SELECT 1 FROM course_favorites WHERE user_id = $1 AND course_id = $2)`
+	var exists bool
+	err := r.pool.QueryRow(ctx, existsQuery, userID, courseID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check favorite exists: %w", err)
+	}
+
+	if exists {
+		deleteQuery := `DELETE FROM course_favorites WHERE user_id = $1 AND course_id = $2`
+		_, err := r.pool.Exec(ctx, deleteQuery, userID, courseID)
+		if err != nil {
+			return true, fmt.Errorf("remove favorite: %w", err)
+		}
+		return false, nil
+	} else {
+		insertQuery := `INSERT INTO course_favorites (user_id, course_id) VALUES ($1, $2)`
+		_, err := r.pool.Exec(ctx, insertQuery, userID, courseID)
+		if err != nil {
+			return false, fmt.Errorf("add favorite: %w", err)
+		}
+		return true, nil
+	}
+}
+
+func (r *CourseRepository) GetUserFavorites(ctx context.Context, userID string) ([]entities.Course, error) {
+	query := `
+		SELECT c.id, c.author_id, c.subject_id, c.title, c.description, 
+		       c.difficulty_level, c.cover_image_url, c.is_published, c.created_at
+		FROM courses c
+		JOIN course_favorites cf ON c.id = cf.course_id
+		WHERE cf.user_id = $1
+		ORDER BY cf.created_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get user favorites: %w", err)
+	}
+	defer rows.Close()
+
+	var courses []entities.Course
+	for rows.Next() {
+		var d courseDTO
+		err := rows.Scan(
+			&d.ID, &d.AuthorID, &d.SubjectID, &d.Title, &d.Description,
+			&d.DifficultyLevel, &d.CoverImageURL, &d.IsPublished, &d.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan favorite course: %w", err)
+		}
+
+		entity := d.toEntity()
+		courses = append(courses, *entity)
+	}
+
+	return courses, nil
+}
+
+// IsFavorite: Check favorite or not for button
+func (r *CourseRepository) IsFavorite(ctx context.Context, userID, courseID string) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM course_favorites WHERE user_id = $1 AND course_id = $2)`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, userID, courseID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // func (r *CourseRepository) ReorderLessons(ctx context.Context, updates map[string]int) error {

@@ -11,10 +11,27 @@ CREATE TABLE courses (
         difficulty_level >= 1
         AND difficulty_level <= 5
     ),
-    tags TEXT [], -- Теги для Python ['python', 'backend', 'loops']
     cover_image_url VARCHAR(255),
     is_published BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE tags (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL, --'Python'
+    slug VARCHAR(50) UNIQUE NOT NULL --'python' for search
+);
+
+INSERT INTO
+    tags (name, slug)
+VALUES ('Python', 'python'),
+    ('Алгебра', 'algebra'),
+    ('Механика', 'mechanics');
+
+CREATE TABLE course_tags (
+    course_id TEXT REFERENCES courses (id) ON DELETE CASCADE,
+    tag_id INTEGER REFERENCES tags (id) ON DELETE CASCADE,
+    PRIMARY KEY (course_id, tag_id)
 );
 
 CREATE TABLE modules (
@@ -42,6 +59,10 @@ CREATE TABLE lessons (
 DROP TABLE IF EXISTS lessons CASCADE;
 
 DROP TABLE IF EXISTS modules CASCADE;
+
+DROP TABLE IF EXISTS course_tags CASCADE;
+
+DROP TABLE IF EXISTS tags CASCADE;
 
 DROP TABLE IF EXISTS courses CASCADE;
 -- +goose StatementEnd

@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"backend/internal/domain/models"
-	"backend/internal/domain/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -49,7 +47,6 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		FullName: req.FullName,
 		Role:     role,
 	})
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -77,7 +74,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Email:    req.Email,
 		Password: req.Password,
 	})
-
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

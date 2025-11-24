@@ -7,6 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type Tag struct {
+	ID   int
+	Name string
+	Slug string
+}
+
 type Course struct {
 	ID              string
 	AuthorID        string
@@ -14,7 +20,7 @@ type Course struct {
 	Title           string
 	Description     string
 	DifficultyLevel int
-	Tags            []string
+	Tags            []Tag
 	CoverImageURL   string
 	IsPublished     bool
 	CreatedAt       time.Time
@@ -43,7 +49,11 @@ type Lesson struct {
 	OrderIndex        int
 }
 
-// Конструкторы
+type CourseFavorite struct {
+	UserID    string
+	CourseID  string
+	CreatedAt time.Time
+}
 
 func NewCourse(authorID, subjectID, title string, difficulty int) (*Course, error) {
 	if difficulty < 1 || difficulty > 5 {
@@ -55,7 +65,6 @@ func NewCourse(authorID, subjectID, title string, difficulty int) (*Course, erro
 		SubjectID:       subjectID,
 		Title:           title,
 		DifficultyLevel: difficulty,
-		Tags:            []string{},
 		IsPublished:     false,
 		CreatedAt:       time.Now().UTC(),
 	}, nil
