@@ -9,6 +9,8 @@ import (
 	"backend/internal/services/auth"
 	"backend/pkg/jwt"
 
+	_ "backend/docs"
+
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
