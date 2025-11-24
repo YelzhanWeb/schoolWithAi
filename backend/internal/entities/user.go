@@ -53,15 +53,14 @@ func NewUser(email, password, firstName, lastName, avatarUrl string, role UserRo
 
 	now := time.Now()
 	return &User{
-		ID:           uuid.NewString(),
-		Email:        email,
-		PasswordHash: password,
-		FirstName:    firstName,
-		LastName:     lastName,
-		Role:         role,
-		AvatarURL:    avatarUrl,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:        uuid.NewString(),
+		Email:     email,
+		FirstName: firstName,
+		LastName:  lastName,
+		Role:      role,
+		AvatarURL: avatarUrl,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}, nil
 }
 

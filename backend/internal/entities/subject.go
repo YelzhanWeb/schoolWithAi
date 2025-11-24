@@ -2,6 +2,8 @@ package entities
 
 import (
 	"errors"
+
+	"github.com/google/uuid"
 )
 
 type Subject struct {
@@ -11,12 +13,12 @@ type Subject struct {
 	NameKz string
 }
 
-func NewSubject(id, slug, nameRu, nameKz string) (*Subject, error) {
+func NewSubject(slug, nameRu, nameKz string) (*Subject, error) {
 	if slug == "" || nameRu == "" || nameKz == "" {
 		return nil, errors.New("all subject fields are required")
 	}
 	return &Subject{
-		ID:     id,
+		ID:     uuid.NewString(),
 		Slug:   slug,
 		NameRu: nameRu,
 		NameKz: nameKz,

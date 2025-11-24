@@ -129,7 +129,7 @@ func newLessonDTO(l *entities.Lesson) lessonDTO {
 func (l lessonDTO) toEntity() *entities.Lesson {
 	return &entities.Lesson{
 		ID:                l.ID,
-		ModuleID:          l.ID,
+		ModuleID:          l.ModuleID,
 		Title:             l.Title,
 		ContentText:       *l.ContentText,
 		VideoURL:          *l.VideoURL,
