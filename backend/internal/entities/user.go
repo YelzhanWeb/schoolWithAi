@@ -44,9 +44,6 @@ func NewUser(email, password, firstName, lastName, avatarUrl string, role UserRo
 	if lastName == "" {
 		return nil, errors.New("last name is required")
 	}
-	if avatarUrl == "" {
-		return nil, errors.New("avatarURL is required")
-	}
 	if !isValidRole(role) {
 		return nil, errors.New("invalid user role")
 	}

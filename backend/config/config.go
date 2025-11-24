@@ -15,20 +15,32 @@ type Config struct {
 	DBSSLMode  string
 	ServerPort string
 	JWTSecret  string
+
+	// MINIO
+	MinioEndpoint   string
+	MinioUser       string
+	MinioPassword   string
+	MinioUseSSL     bool
+	MinioBucketName string
+	MinioPublicURL  string
 }
 
 func LoadConfig() Config {
-	jwtSecret := GetEnv("JWT_SECRET", "secret")
-
 	return Config{
-		DBHost:     GetEnv("DB_HOST", "localhost"),
-		DBPort:     getEnvAsInt("DB_PORT", 5432),
-		DBUser:     GetEnv("DB_USER", "admin"),
-		DBPassword: GetEnv("DB_PASSWORD", "admin123"),
-		DBName:     GetEnv("DB_NAME", "education_platform"),
-		DBSSLMode:  GetEnv("DB_SSLMODE", "disable"),
-		ServerPort: GetEnv("SERVER_PORT", "8080"),
-		JWTSecret:  jwtSecret,
+		DBHost:          GetEnv("DB_HOST", "localhost"),
+		DBPort:          getEnvAsInt("DB_PORT", 5432),
+		DBUser:          GetEnv("DB_USER", "admin"),
+		DBPassword:      GetEnv("DB_PASSWORD", "admin123"),
+		DBName:          GetEnv("DB_NAME", "education_platform"),
+		DBSSLMode:       GetEnv("DB_SSLMODE", "disable"),
+		ServerPort:      GetEnv("SERVER_PORT", "8080"),
+		JWTSecret:       GetEnv("JWT_SECRET", "secret"),
+		MinioEndpoint:   GetEnv("MINIO_ENDPOINT", "localhost:9000"),
+		MinioUser:       GetEnv("MINIO_ROOT_USER", "admin"),
+		MinioPassword:   GetEnv("MINIO_ROOT_PASSWORD", "admin123"),
+		MinioUseSSL:     GetEnv("MINIO_USE_SSL", "false") == "true",
+		MinioBucketName: GetEnv("MINIO_BUCKET_NAME", "school-assets"),
+		MinioPublicURL:  GetEnv("MINIO_PUBLIC_URL", "http://localhost:9000"),
 	}
 }
 

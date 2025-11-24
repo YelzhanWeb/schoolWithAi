@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"time"
 
+	"backend/internal/adapters/storage"
 	"backend/internal/entities"
 	"backend/pkg/jwt"
 
@@ -22,20 +24,32 @@ type UserRepository interface {
 type AuthService struct {
 	userRepo   UserRepository
 	jwtManager *jwt.JWTManager
+	storage    storage.FileStorage
 }
 
-func NewAuthService(userRepo UserRepository, jwtManager *jwt.JWTManager) *AuthService {
+func NewAuthService(userRepo UserRepository, jwtManager *jwt.JWTManager, storage storage.FileStorage) *AuthService {
 	return &AuthService{
 		userRepo:   userRepo,
 		jwtManager: jwtManager,
+		storage:    storage,
 	}
 }
 
-func (s *AuthService) Register(ctx context.Context, user *entities.User, password string) error {
+func (s *AuthService) Register(ctx context.Context, user *entities.User, password string, avatarFile *multipart.FileHeader) error {
 	var err error
 	user.PasswordHash, err = s.hashPassword(password)
 	if err != nil {
 		return fmt.Errorf("failed to hashed password: %w", err)
+	}
+
+	if avatarFile != nil {
+		avatarURL, err := s.storage.UploadFile(ctx, avatarFile, "avatars")
+		if err != nil {
+			return fmt.Errorf("failed to upload avatar: %w", err)
+		}
+		user.AvatarURL = avatarURL
+	} else {
+		user.AvatarURL = s.storage.GetDefaultAvatarURL()
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {

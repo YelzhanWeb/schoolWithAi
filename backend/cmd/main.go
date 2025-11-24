@@ -11,12 +11,14 @@ import (
 
 	"backend/config"
 	"backend/internal/adapters/http"
+	"backend/internal/adapters/storage"
 	"backend/internal/services/auth"
 
 	"backend/internal/adapters/postgres/user"
 
 	"backend/pkg/jwt"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -27,6 +29,9 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	if err := godotenv.Load("../.env"); err != nil {
+		log.Println("No .env file found, using default values")
+	}
 	cfg := config.LoadConfig()
 
 	if cfg.JWTSecret == "" || cfg.JWTSecret == "your-secret-key-change-this" {
@@ -56,8 +61,19 @@ func main() {
 	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
 	mlServiceURL := config.GetEnv("ML_SERVICE_URL", "http://localhost:5000")
 	// mlClient := ml_client.NewMLClient(mlServiceURL)
+	minioStorage, err := storage.NewMinioStorage(
+		cfg.MinioEndpoint,
+		cfg.MinioUser,
+		cfg.MinioPassword,
+		cfg.MinioBucketName,
+		cfg.MinioPublicURL,
+		cfg.MinioUseSSL,
+	)
+	if err != nil {
+		log.Fatalf("Failed to init MinIO: %v", err)
+	}
 
-	authService := auth.NewAuthService(userRepo, jwtManager)
+	authService := auth.NewAuthService(userRepo, jwtManager, minioStorage)
 
 	httpServer := http.NewServer(
 		authService,

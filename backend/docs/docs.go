@@ -119,7 +119,7 @@ const docTemplate = `{
             "post": {
                 "description": "Register a new user (student or teacher)",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -130,13 +130,45 @@ const docTemplate = `{
                 "summary": "Register a new user",
                 "parameters": [
                     {
-                        "description": "Registration payload",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_adapters_http_handlers.RegisterRequest"
-                        }
+                        "type": "file",
+                        "description": "User Avatar Image",
+                        "name": "avatar",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Email",
+                        "name": "email",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Password (min 8 chars)",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Role (student or teacher)",
+                        "name": "role",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "First Name",
+                        "name": "first_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Last Name",
+                        "name": "last_name",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -217,48 +249,6 @@ const docTemplate = `{
                 "token": {
                     "type": "string",
                     "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                }
-            }
-        },
-        "internal_adapters_http_handlers.RegisterRequest": {
-            "type": "object",
-            "required": [
-                "avatar_url",
-                "email",
-                "full_name",
-                "last_name",
-                "password",
-                "role"
-            ],
-            "properties": {
-                "avatar_url": {
-                    "type": "string",
-                    "example": "http://image.com/avatar.jpg"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "student@example.com"
-                },
-                "full_name": {
-                    "type": "string",
-                    "example": "John"
-                },
-                "last_name": {
-                    "type": "string",
-                    "example": "Doe"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 8,
-                    "example": "secret123"
-                },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "student",
-                        "teacher"
-                    ],
-                    "example": "student"
                 }
             }
         },

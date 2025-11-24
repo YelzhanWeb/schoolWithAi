@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"mime/multipart"
 	"net/http"
 
 	"backend/internal/entities"
@@ -16,7 +17,7 @@ type ErrorResponse struct {
 	Message string `json:"message" example:"something went wrong"`
 }
 type AuthService interface {
-	Register(ctx context.Context, user *entities.User, password string) error
+	Register(ctx context.Context, user *entities.User, password string, avatar *multipart.FileHeader) error
 	Login(ctx context.Context, email, password string) (string, error)
 	ChangePassword(ctx context.Context, userID string, oldPassword, newPassword string) error
 }
@@ -30,12 +31,12 @@ func NewAuthHandler(authService AuthService) *AuthHandler {
 }
 
 type RegisterRequest struct {
-	Email     string `json:"email" binding:"required,email" example:"student@example.com"`
-	Password  string `json:"password" binding:"required,min=8" example:"secret123"`
-	Role      string `json:"role" binding:"required,oneof=student teacher" example:"student"`
-	FirstName string `json:"full_name" binding:"required" example:"John"`
-	LastName  string `json:"last_name" binding:"required" example:"Doe"`
-	AvatarURL string `json:"avatar_url" binding:"required" example:"http://image.com/avatar.jpg"`
+	Email     string                `form:"email" binding:"required,email"`
+	Password  string                `form:"password" binding:"required,min=8"`
+	Role      string                `form:"role" binding:"required,oneof=student teacher"`
+	FirstName string                `form:"first_name" binding:"required"`
+	LastName  string                `form:"last_name" binding:"required"`
+	Avatar    *multipart.FileHeader `form:"avatar"`
 }
 
 type RegisterResponse struct {
@@ -50,9 +51,14 @@ type RegisterResponse struct {
 // @Summary Register a new user
 // @Description Register a new user (student or teacher)
 // @Tags auth
-// @Accept json
+// @Accept mpfd
 // @Produce json
-// @Param input body RegisterRequest true "Registration payload"
+// @Param avatar formData file false "User Avatar Image"
+// @Param email formData string true "User Email"
+// @Param password formData string true "User Password (min 8 chars)"
+// @Param role formData string true "User Role (student or teacher)"
+// @Param first_name formData string true "First Name"
+// @Param last_name formData string true "Last Name"
 // @Success 201 {object} RegisterResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 409 {object} ErrorResponse "User already exists"
@@ -60,20 +66,21 @@ type RegisterResponse struct {
 // @Router /v1/auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Error().Err(err).Msg("register validation failed")
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid json"})
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Validation failed: " + err.Error()})
 		return
 	}
 
-	user, err := entities.NewUser(req.Email, req.Password, req.FirstName, req.LastName, req.AvatarURL, entities.UserRole(req.Role))
+	file, _ := c.FormFile("avatar")
+
+	user, err := entities.NewUser(req.Email, req.Password, req.FirstName, req.LastName, "", entities.UserRole(req.Role))
 	if err != nil {
 		log.Error().Err(err).Msg("domain entity creation failed")
 		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
 		return
 	}
 
-	err = h.authService.Register(c.Request.Context(), user, req.Password)
+	err = h.authService.Register(c.Request.Context(), user, req.Password, file)
 	if err != nil {
 		if errors.Is(err, entities.ErrAlreadyExists) {
 			c.JSON(http.StatusConflict, ErrorResponse{Message: err.Error()})

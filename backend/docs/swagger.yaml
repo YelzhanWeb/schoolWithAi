@@ -34,38 +34,6 @@ definitions:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
     type: object
-  internal_adapters_http_handlers.RegisterRequest:
-    properties:
-      avatar_url:
-        example: http://image.com/avatar.jpg
-        type: string
-      email:
-        example: student@example.com
-        type: string
-      full_name:
-        example: John
-        type: string
-      last_name:
-        example: Doe
-        type: string
-      password:
-        example: secret123
-        minLength: 8
-        type: string
-      role:
-        enum:
-        - student
-        - teacher
-        example: student
-        type: string
-    required:
-    - avatar_url
-    - email
-    - full_name
-    - last_name
-    - password
-    - role
-    type: object
   internal_adapters_http_handlers.RegisterResponse:
     properties:
       email:
@@ -152,15 +120,38 @@ paths:
   /v1/auth/register:
     post:
       consumes:
-      - application/json
+      - multipart/form-data
       description: Register a new user (student or teacher)
       parameters:
-      - description: Registration payload
-        in: body
-        name: input
+      - description: User Avatar Image
+        in: formData
+        name: avatar
+        type: file
+      - description: User Email
+        in: formData
+        name: email
         required: true
-        schema:
-          $ref: '#/definitions/internal_adapters_http_handlers.RegisterRequest'
+        type: string
+      - description: User Password (min 8 chars)
+        in: formData
+        name: password
+        required: true
+        type: string
+      - description: User Role (student or teacher)
+        in: formData
+        name: role
+        required: true
+        type: string
+      - description: First Name
+        in: formData
+        name: first_name
+        required: true
+        type: string
+      - description: Last Name
+        in: formData
+        name: last_name
+        required: true
+        type: string
       produces:
       - application/json
       responses:
