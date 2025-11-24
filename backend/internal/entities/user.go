@@ -36,7 +36,7 @@ func NewUser(email, password, firstName, lastName, avatarUrl string, role UserRo
 		return nil, errors.New("password hash is required")
 	}
 	if utf8.RuneCountInString(password) < 8 {
-		return nil, errors.New("possword is less than 8")
+		return nil, errors.New("password is less than 8")
 	}
 	if firstName == "" {
 		return nil, errors.New("first name is required")

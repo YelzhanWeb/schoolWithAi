@@ -1,9 +1,10 @@
 package middleware
 
 import (
-	"backend/pkg/jwt"
 	"net/http"
 	"strings"
+
+	"backend/pkg/jwt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +20,7 @@ func AuthMiddleware(jwtManager *jwt.JWTManager) gin.HandlerFunc {
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
 			c.Abort()
 			return
 		}
@@ -27,14 +28,16 @@ func AuthMiddleware(jwtManager *jwt.JWTManager) gin.HandlerFunc {
 		token := parts[1]
 		claims, err := jwtManager.Verify(token)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
 		}
 
+		// Сохраняем данные пользователя в контекст
 		c.Set("user_id", claims.UserID)
 		c.Set("email", claims.Email)
 		c.Set("role", claims.Role)
+
 		c.Next()
 	}
 }
