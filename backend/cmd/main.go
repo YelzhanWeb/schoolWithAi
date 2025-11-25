@@ -14,7 +14,11 @@ import (
 	"backend/internal/adapters/storage"
 	"backend/internal/services/auth"
 
+	"backend/internal/adapters/postgres/course"
+	"backend/internal/adapters/postgres/subject"
 	"backend/internal/adapters/postgres/user"
+	courseService "backend/internal/services/course"
+	subjectService "backend/internal/services/subject"
 
 	"backend/pkg/jwt"
 
@@ -56,6 +60,17 @@ func main() {
 	}
 	defer userRepo.Close()
 
+	subjectRepo := subject.NewSubjectRepository(connectionURL)
+	if err := subjectRepo.Connect(ctx); err != nil {
+		log.Fatalf("Failed subject repo: %v", err)
+	}
+
+	courseRepo := course.NewCourseRepository(connectionURL)
+	if err := courseRepo.Connect(ctx); err != nil {
+		log.Fatalf("Failed to connect course repo: %v", err)
+	}
+	defer courseRepo.Close()
+
 	log.Println("All repositories connected")
 
 	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
@@ -74,9 +89,14 @@ func main() {
 	}
 
 	authService := auth.NewAuthService(userRepo, jwtManager, minioStorage)
+	subjService := subjectService.NewSubjectService(subjectRepo)
+	cService := courseService.NewCourseService(courseRepo)
 
 	httpServer := http.NewServer(
 		authService,
+		cService,
+		subjService,
+		minioStorage,
 		cfg.JWTSecret,
 		mlServiceURL,
 	)

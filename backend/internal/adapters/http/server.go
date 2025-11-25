@@ -6,7 +6,10 @@ import (
 
 	"backend/internal/adapters/http/handlers"
 	"backend/internal/adapters/http/middleware"
+	"backend/internal/adapters/storage"
 	"backend/internal/services/auth"
+	"backend/internal/services/course"
+	"backend/internal/services/subject"
 	"backend/pkg/jwt"
 
 	_ "backend/docs"
@@ -18,15 +21,21 @@ import (
 )
 
 type Server struct {
-	router       *gin.Engine
-	httpServer   *http.Server
-	authService  *auth.AuthService
-	jwtManager   *jwt.JWTManager
-	mlServiceURL string
+	router         *gin.Engine
+	httpServer     *http.Server
+	authService    *auth.AuthService
+	courseService  *course.CourseService
+	subjectService *subject.SubjectService
+	uploadService  *storage.MinioStorage
+	jwtManager     *jwt.JWTManager
+	mlServiceURL   string
 }
 
 func NewServer(
 	authService *auth.AuthService,
+	courseService *course.CourseService,
+	subjectService *subject.SubjectService,
+	uploadService *storage.MinioStorage,
 	jwtSecret string,
 	mlServiceURL string,
 ) *Server {
@@ -34,10 +43,13 @@ func NewServer(
 	router.Use(middleware.CORSMiddleware())
 
 	s := &Server{
-		router:       router,
-		authService:  authService,
-		jwtManager:   jwt.NewJWTManager(jwtSecret),
-		mlServiceURL: mlServiceURL,
+		router:         router,
+		authService:    authService,
+		courseService:  courseService,
+		subjectService: subjectService,
+		uploadService:  uploadService,
+		jwtManager:     jwt.NewJWTManager(jwtSecret),
+		mlServiceURL:   mlServiceURL,
 	}
 
 	s.setupRoutes()
@@ -58,6 +70,10 @@ func (s *Server) setupRoutes() {
 	api := s.router.Group("/v1")
 	{
 		authHandler := handlers.NewAuthHandler(s.authService)
+		courseHandler := handlers.NewCourseHandler(s.courseService)
+		subjectHandler := handlers.NewSubjectHandler(s.subjectService)
+		uploadHandler := handlers.NewUploadHandler(s.uploadService)
+		api.GET("/subjects", subjectHandler.GetAllSubjects)
 
 		auth := api.Group("/auth")
 		{
@@ -70,6 +86,12 @@ func (s *Server) setupRoutes() {
 		protected.Use(middleware.AuthMiddleware(s.jwtManager))
 		{
 			protected.POST("/auth/change-password", authHandler.ChangePassword)
+
+			protected.POST("/upload", uploadHandler.UploadFile)
+
+			protected.POST("/courses", courseHandler.CreateCourse)
+			protected.PUT("/courses/:id", courseHandler.UpdateCourse)
+			protected.POST("/courses/:id/publish", courseHandler.ChangePublishStatus)
 		}
 	}
 }

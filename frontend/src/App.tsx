@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RegisterPage } from "./pages/Register";
-import { LoginPage } from "./pages/Login"; // Импортируем логин
+import { LoginPage } from "./pages/Login";
 import { ChangePasswordPage } from "./pages/ChangePassword";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { CreateCoursePage } from "./pages/teacher/CreateCourse";
 
 function App() {
   return (
@@ -18,6 +20,14 @@ function App() {
           path="/dashboard"
           element={
             <div className="p-10 text-2xl">Добро пожаловать в OqysAI! 🚀</div>
+          }
+        />
+        <Route
+          path="/teacher/create-course"
+          element={
+            <ProtectedRoute roles={["teacher", "admin"]}>
+              <CreateCoursePage />
+            </ProtectedRoute>
           }
         />
       </Routes>

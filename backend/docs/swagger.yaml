@@ -1,4 +1,15 @@
 definitions:
+  backend_internal_entities.Subject:
+    properties:
+      id:
+        type: string
+      nameKz:
+        type: string
+      nameRu:
+        type: string
+      slug:
+        type: string
+    type: object
   internal_adapters_http_handlers.ChangePasswordRequest:
     properties:
       new_password:
@@ -9,6 +20,28 @@ definitions:
     required:
     - new_password
     - old_password
+    type: object
+  internal_adapters_http_handlers.CreateCourseRequest:
+    properties:
+      description:
+        type: string
+      difficulty_level:
+        maximum: 5
+        minimum: 1
+        type: integer
+      subject_id:
+        type: string
+      title:
+        type: string
+    required:
+    - difficulty_level
+    - subject_id
+    - title
+    type: object
+  internal_adapters_http_handlers.CreateCourseResponse:
+    properties:
+      id:
+        type: string
     type: object
   internal_adapters_http_handlers.ErrorResponse:
     properties:
@@ -33,6 +66,11 @@ definitions:
       token:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
+    type: object
+  internal_adapters_http_handlers.PublishStatusRequest:
+    properties:
+      is_published:
+        type: boolean
     type: object
   internal_adapters_http_handlers.RegisterResponse:
     properties:
@@ -60,6 +98,22 @@ definitions:
     - email
     - new_password
     - old_password
+    type: object
+  internal_adapters_http_handlers.UpdateCourseRequest:
+    properties:
+      cover_image_url:
+        type: string
+      description:
+        type: string
+      difficulty_level:
+        type: integer
+      title:
+        type: string
+    type: object
+  internal_adapters_http_handlers.UploadResponse:
+    properties:
+      url:
+        type: string
     type: object
 info:
   contact: {}
@@ -216,6 +270,143 @@ paths:
       summary: Reset password (public)
       tags:
       - auth
+  /v1/courses:
+    post:
+      consumes:
+      - application/json
+      description: Create a course (Teacher/Admin only)
+      parameters:
+      - description: Course data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.CreateCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.CreateCourseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new course
+      tags:
+      - courses
+  /v1/courses/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update title, description, cover, etc. (Author only)
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.UpdateCourseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update course details
+      tags:
+      - courses
+  /v1/courses/{id}/publish:
+    post:
+      consumes:
+      - application/json
+      description: Change visibility of the course
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.PublishStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Publish or Unpublish course
+      tags:
+      - courses
+  /v1/subjects:
+    get:
+      description: Get list of available subjects
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/backend_internal_entities.Subject'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+      summary: Get all subjects
+      tags:
+      - subjects
 securityDefinitions:
   BearerAuth:
     in: header
