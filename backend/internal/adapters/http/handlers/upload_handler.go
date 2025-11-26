@@ -32,7 +32,7 @@ type UploadResponse struct {
 // @Success 200 {object} UploadResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// // @Router /v1/upload [post]
+// @Router /v1/upload [post]
 func (h *UploadHandler) UploadFile(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {

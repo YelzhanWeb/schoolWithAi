@@ -10,7 +10,7 @@ export const CreateCoursePage = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    subject_id: "math", // Временно хардкодим или вводим (math, physics...)
+    subject_id: "math",
     difficulty_level: 1,
   });
 

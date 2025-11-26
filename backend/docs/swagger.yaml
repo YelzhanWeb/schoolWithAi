@@ -43,11 +43,81 @@ definitions:
       id:
         type: string
     type: object
+  internal_adapters_http_handlers.CreateLessonRequest:
+    properties:
+      content_text:
+        type: string
+      module_id:
+        type: string
+      order_index:
+        type: integer
+      title:
+        type: string
+      video_url:
+        type: string
+    required:
+    - module_id
+    - order_index
+    - title
+    type: object
+  internal_adapters_http_handlers.CreateLessonResponse:
+    properties:
+      lesson_id:
+        type: string
+    required:
+    - lesson_id
+    type: object
+  internal_adapters_http_handlers.CreateModuleRequest:
+    properties:
+      course_id:
+        type: string
+      order_index:
+        type: integer
+      title:
+        type: string
+    required:
+    - course_id
+    - order_index
+    - title
+    type: object
+  internal_adapters_http_handlers.CreateModuleResponse:
+    properties:
+      module_id:
+        type: string
+    required:
+    - module_id
+    type: object
   internal_adapters_http_handlers.ErrorResponse:
     properties:
       message:
         example: something went wrong
         type: string
+    type: object
+  internal_adapters_http_handlers.GetStructureResponse:
+    properties:
+      modules:
+        items:
+          $ref: '#/definitions/internal_adapters_http_handlers.ModuleResponse'
+        type: array
+    type: object
+  internal_adapters_http_handlers.LessonResponse:
+    properties:
+      content_text:
+        type: string
+      file_attachment_url:
+        type: string
+      id:
+        type: string
+      module_id:
+        type: string
+      order_index:
+        type: integer
+      title:
+        type: string
+      video_url:
+        type: string
+      xp_reward:
+        type: integer
     type: object
   internal_adapters_http_handlers.LoginRequest:
     properties:
@@ -65,6 +135,21 @@ definitions:
     properties:
       token:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  internal_adapters_http_handlers.ModuleResponse:
+    properties:
+      course_id:
+        type: string
+      id:
+        type: string
+      lessons:
+        items:
+          $ref: '#/definitions/internal_adapters_http_handlers.LessonResponse'
+        type: array
+      order_index:
+        type: integer
+      title:
         type: string
     type: object
   internal_adapters_http_handlers.PublishStatusRequest:
@@ -106,6 +191,13 @@ definitions:
       description:
         type: string
       difficulty_level:
+        type: integer
+      title:
+        type: string
+    type: object
+  internal_adapters_http_handlers.UpdateModuleRequest:
+    properties:
+      order_index:
         type: integer
       title:
         type: string
@@ -299,8 +391,6 @@ paths:
             $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
         "500":
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new course
@@ -342,8 +432,6 @@ paths:
             $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
         "500":
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update course details
@@ -381,13 +469,135 @@ paths:
             $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
         "500":
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Publish or Unpublish course
       tags:
       - courses
+  /v1/courses/{id}/structure:
+    get:
+      description: Get modules and lessons for editor
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.GetStructureResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Get full course structure
+      tags:
+      - courses
+  /v1/lessons:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Lesson data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.CreateLessonRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.CreateLessonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Add lesson to module
+      tags:
+      - lessons
+  /v1/modules:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Module data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.CreateModuleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.CreateModuleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Add module to course
+      tags:
+      - modules
+  /v1/modules/{id}:
+    delete:
+      parameters:
+      - description: Module ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Delete module
+      tags:
+      - modules
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Module ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.UpdateModuleRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Update module
+      tags:
+      - modules
   /v1/subjects:
     get:
       description: Get list of available subjects
@@ -407,6 +617,42 @@ paths:
       summary: Get all subjects
       tags:
       - subjects
+  /v1/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload file to MinIO (avatar, course_cover, lesson_material)
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: File type (avatar, cover, lesson)
+        in: formData
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.UploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload a file
+      tags:
+      - upload
 securityDefinitions:
   BearerAuth:
     in: header

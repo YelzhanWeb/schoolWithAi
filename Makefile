@@ -20,3 +20,7 @@ fmt:
 	@gofmt -l -w `find . -type f -name '*.go' -not -path "./vendor/*"`
 	@golines --max-len=120 --base-formatter=gofmt --shorten-comments --ignore-generated  --ignored-dirs=vendor -w .
 	@echo "✅ Code formatted successfully"
+
+.PHONY: run_frontend
+run_frontend:
+	cd frontend && npm run dev

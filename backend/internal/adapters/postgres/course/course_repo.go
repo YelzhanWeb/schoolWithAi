@@ -266,6 +266,19 @@ func (r *CourseRepository) ListModulesByCourse(ctx context.Context, courseID str
 	return modules, nil
 }
 
+func (r *CourseRepository) GetModuleByID(ctx context.Context, moduleID string) (*entities.Module, error) {
+	query := `SELECT id, course_id, title, order_index FROM modules WHERE id = $1`
+	var m entities.Module
+	err := r.pool.QueryRow(ctx, query, moduleID).Scan(&m.ID, &m.CourseID, &m.Title, &m.OrderIndex)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, entities.ErrNotFound
+		}
+		return nil, fmt.Errorf("get module: %w", err)
+	}
+	return &m, nil
+}
+
 func (r *CourseRepository) UpdateModule(ctx context.Context, module *entities.Module) error {
 	d := newModuleDTO(module)
 

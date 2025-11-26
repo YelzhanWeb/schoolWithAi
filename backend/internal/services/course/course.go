@@ -11,6 +11,17 @@ type CourseRepository interface {
 	Create(ctx context.Context, course *entities.Course) error
 	UpdateCourse(ctx context.Context, course *entities.Course) error
 	GetByID(ctx context.Context, id string) (*entities.Course, error)
+	GetCourseStructure(ctx context.Context, courseID string) ([]entities.Module, error)
+
+	AddModule(ctx context.Context, module *entities.Module) error
+	GetModuleByID(ctx context.Context, moduleID string) (*entities.Module, error) // <-- Добавили
+	UpdateModule(ctx context.Context, module *entities.Module) error
+	DeleteModule(ctx context.Context, id string) error
+
+	AddLesson(ctx context.Context, lesson *entities.Lesson) error
+	GetLessonByID(ctx context.Context, lessonID string) (*entities.Lesson, error)
+	UpdateLesson(ctx context.Context, lesson *entities.Lesson) error
+	DeleteLesson(ctx context.Context, id string) error
 }
 
 type CourseService struct {
@@ -63,4 +74,92 @@ func (s *CourseService) ChangePublishStatus(ctx context.Context, courseID string
 
 	course.IsPublished = isPublished
 	return s.repo.UpdateCourse(ctx, course)
+}
+
+func (s *CourseService) CreateModule(ctx context.Context, userID string, module *entities.Module) error {
+	if _, err := s.GetUserCourse(ctx, module.CourseID, userID); err != nil {
+		return err
+	}
+	return s.repo.AddModule(ctx, module)
+}
+
+func (s *CourseService) UpdateModule(ctx context.Context, userID string, module *entities.Module) error {
+	existing, err := s.repo.GetModuleByID(ctx, module.ID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.GetUserCourse(ctx, existing.CourseID, userID); err != nil {
+		return err
+	}
+
+	existing.Title = module.Title
+	existing.OrderIndex = module.OrderIndex
+
+	return s.repo.UpdateModule(ctx, existing)
+}
+
+func (s *CourseService) DeleteModule(ctx context.Context, userID, moduleID string) error {
+	existing, err := s.repo.GetModuleByID(ctx, moduleID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.GetUserCourse(ctx, existing.CourseID, userID); err != nil {
+		return err
+	}
+	return s.repo.DeleteModule(ctx, moduleID)
+}
+
+func (s *CourseService) CreateLesson(ctx context.Context, userID string, lesson *entities.Lesson) error {
+	module, err := s.repo.GetModuleByID(ctx, lesson.ModuleID)
+	if err != nil {
+		return fmt.Errorf("module not found: %w", err)
+	}
+
+	if _, err := s.GetUserCourse(ctx, module.CourseID, userID); err != nil {
+		return err
+	}
+
+	return s.repo.AddLesson(ctx, lesson)
+}
+
+func (s *CourseService) UpdateLesson(ctx context.Context, userID string, lesson *entities.Lesson) error {
+	existing, err := s.repo.GetLessonByID(ctx, lesson.ID)
+	if err != nil {
+		return err
+	}
+
+	module, err := s.repo.GetModuleByID(ctx, existing.ModuleID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.GetUserCourse(ctx, module.CourseID, userID); err != nil {
+		return err
+	}
+
+	existing.Title = lesson.Title
+	existing.ContentText = lesson.ContentText
+	existing.VideoURL = lesson.VideoURL
+	existing.OrderIndex = lesson.OrderIndex
+
+	return s.repo.UpdateLesson(ctx, existing)
+}
+
+func (s *CourseService) DeleteLesson(ctx context.Context, userID, lessonID string) error {
+	existing, err := s.repo.GetLessonByID(ctx, lessonID)
+	if err != nil {
+		return err
+	}
+	module, err := s.repo.GetModuleByID(ctx, existing.ModuleID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.GetUserCourse(ctx, module.CourseID, userID); err != nil {
+		return err
+	}
+
+	return s.repo.DeleteLesson(ctx, lessonID)
+}
+
+func (s *CourseService) GetFullStructure(ctx context.Context, courseID string) ([]entities.Module, error) {
+	return s.repo.GetCourseStructure(ctx, courseID)
 }
