@@ -143,6 +143,7 @@ func (s *CourseService) UpdateLesson(ctx context.Context, userID string, lesson 
 	existing.Title = lesson.Title
 	existing.ContentText = lesson.ContentText
 	existing.VideoURL = lesson.VideoURL
+	existing.FileAttachmentURL = lesson.FileAttachmentURL
 	existing.OrderIndex = lesson.OrderIndex
 
 	return s.repo.UpdateLesson(ctx, existing)

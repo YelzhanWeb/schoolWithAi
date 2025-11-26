@@ -4,6 +4,7 @@ import { LoginPage } from "./pages/Login";
 import { ChangePasswordPage } from "./pages/ChangePassword";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { CreateCoursePage } from "./pages/teacher/CreateCourse";
+import { EditCoursePage } from "./pages/teacher/EditCourse";
 
 function App() {
   return (
@@ -27,6 +28,15 @@ function App() {
           element={
             <ProtectedRoute roles={["teacher", "admin"]}>
               <CreateCoursePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/teacher/courses/:id/edit"
+          element={
+            <ProtectedRoute roles={["teacher", "admin"]}>
+              <EditCoursePage />
             </ProtectedRoute>
           }
         />

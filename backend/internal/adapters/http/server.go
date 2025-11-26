@@ -100,7 +100,7 @@ func (s *Server) setupRoutes() {
 
 			protected.POST("/lessons", courseHandler.CreateLesson)
 			protected.GET("/lessons/:id", courseHandler.GetLesson)
-			protected.PUT("/lesson/:id", courseHandler.UpdateLesson)
+			protected.PUT("/lessons/:id", courseHandler.UpdateLesson)
 		}
 	}
 }

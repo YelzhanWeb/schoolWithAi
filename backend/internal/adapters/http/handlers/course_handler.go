@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"backend/internal/entities"
@@ -42,6 +43,7 @@ type CreateCourseRequest struct {
 	Description     string `json:"description"`
 	SubjectID       string `json:"subject_id"       binding:"required"`
 	DifficultyLevel int    `json:"difficulty_level" binding:"required,min=1,max=5"`
+	CoverImageURL   string `json:"cover_image_url"`
 }
 
 type CreateCourseResponse struct {
@@ -91,6 +93,7 @@ func (h *CourseHandler) CreateCourse(c *gin.Context) {
 		return
 	}
 	course.Description = req.Description
+	course.CoverImageURL = req.CoverImageURL
 
 	err = h.courseService.CreateCourse(c.Request.Context(), course)
 	if err != nil {
@@ -471,7 +474,7 @@ func (h *CourseHandler) UpdateLesson(c *gin.Context) {
 		log.Error().Err(err).Str("user_id", userID).Str("lesson_id", lessonID).Msg("failed to parse json request")
 		return
 	}
-
+	fmt.Println(req.FileAttachmentURL)
 	lesson := &entities.Lesson{
 		ID:                lessonID,
 		Title:             req.Title,

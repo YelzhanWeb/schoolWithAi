@@ -127,13 +127,25 @@ func newLessonDTO(l *entities.Lesson) lessonDTO {
 }
 
 func (l lessonDTO) toEntity() *entities.Lesson {
+	var content, video, file string
+
+	if l.ContentText != nil {
+		content = *l.ContentText
+	}
+	if l.VideoURL != nil {
+		video = *l.VideoURL
+	}
+	if l.FileAttachmentURL != nil {
+		file = *l.FileAttachmentURL
+	}
+
 	return &entities.Lesson{
 		ID:                l.ID,
 		ModuleID:          l.ModuleID,
 		Title:             l.Title,
-		ContentText:       *l.ContentText,
-		VideoURL:          *l.VideoURL,
-		FileAttachmentURL: *l.FileAttachmentURL,
+		ContentText:       content,
+		VideoURL:          video,
+		FileAttachmentURL: file,
 		XPReward:          l.XPReward,
 		OrderIndex:        l.OrderIndex,
 	}
