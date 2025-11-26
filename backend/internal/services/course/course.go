@@ -122,6 +122,10 @@ func (s *CourseService) CreateLesson(ctx context.Context, userID string, lesson 
 	return s.repo.AddLesson(ctx, lesson)
 }
 
+func (s *CourseService) GetLessonByID(ctx context.Context, lessonID string) (*entities.Lesson, error) {
+	return s.repo.GetLessonByID(ctx, lessonID)
+}
+
 func (s *CourseService) UpdateLesson(ctx context.Context, userID string, lesson *entities.Lesson) error {
 	existing, err := s.repo.GetLessonByID(ctx, lesson.ID)
 	if err != nil {

@@ -47,6 +47,8 @@ definitions:
     properties:
       content_text:
         type: string
+      file_attachment_url:
+        type: string
       module_id:
         type: string
       order_index:
@@ -193,6 +195,19 @@ definitions:
       difficulty_level:
         type: integer
       title:
+        type: string
+    type: object
+  internal_adapters_http_handlers.UpdateLessonRequest:
+    properties:
+      content_text:
+        type: string
+      file_attachment_url:
+        type: string
+      order_index:
+        type: integer
+      title:
+        type: string
+      video_url:
         type: string
     type: object
   internal_adapters_http_handlers.UpdateModuleRequest:
@@ -520,6 +535,58 @@ paths:
       security:
       - BearerAuth: []
       summary: Add lesson to module
+      tags:
+      - lessons
+  /v1/lessons/{id}:
+    get:
+      description: Get content, video url and attachments for a specific lesson
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.LessonResponse'
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Get full lesson details
+      tags:
+      - lessons
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.UpdateLessonRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Update lesson content
       tags:
       - lessons
   /v1/modules:
