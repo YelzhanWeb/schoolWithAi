@@ -39,6 +39,10 @@ func (s *CourseService) CreateCourse(ctx context.Context, course *entities.Cours
 	return nil
 }
 
+func (s *CourseService) GetCourseByID(ctx context.Context, courseID string) (*entities.Course, error) {
+	return s.repo.GetByID(ctx, courseID)
+}
+
 func (s *CourseService) GetUserCourse(ctx context.Context, courseID, userID string) (*entities.Course, error) {
 	course, err := s.repo.GetByID(ctx, courseID)
 	if err != nil {

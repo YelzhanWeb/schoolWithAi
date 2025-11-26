@@ -15,6 +15,7 @@ import (
 type CourseService interface {
 	CreateCourse(ctx context.Context, course *entities.Course) error
 	GetUserCourse(ctx context.Context, courseID, userID string) (*entities.Course, error)
+	GetCourseByID(ctx context.Context, courseID string) (*entities.Course, error)
 	UpdateCourse(ctx context.Context, courseID string, updates *entities.Course) error
 	ChangePublishStatus(ctx context.Context, courseID string, isPublished bool) error
 
@@ -109,6 +110,74 @@ func (h *CourseHandler) CreateCourse(c *gin.Context) {
 		Str("title", course.Title).
 		Int("difficulty_level", course.DifficultyLevel).
 		Msg("course created successfully")
+}
+
+type TagResponse struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
+
+type CourseDetailResponse struct {
+	ID              string        `json:"id"`
+	AuthorID        string        `json:"author_id"`
+	SubjectID       string        `json:"subject_id"`
+	Title           string        `json:"title"`
+	Description     string        `json:"description"`
+	DifficultyLevel int           `json:"difficulty_level"`
+	CoverImageURL   string        `json:"cover_image_url"`
+	IsPublished     bool          `json:"is_published"`
+	Tags            []TagResponse `json:"tags"`
+}
+
+// GetCourse godoc
+// @Summary Get course details
+// @Description Get details of a specific course by ID
+// @Tags courses
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Course ID"
+// @Success 200 {object} CourseDetailResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/courses/{id} [get]
+func (h *CourseHandler) GetCourse(c *gin.Context) {
+	courseID := c.Param("id")
+
+	course, err := h.courseService.GetCourseByID(c.Request.Context(), courseID)
+	if err != nil {
+		if errors.Is(err, entities.ErrNotFound) {
+			c.JSON(http.StatusNotFound, ErrorResponse{Message: "course not found"})
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		log.Error().Err(err).Str("course_id", courseID).Msg("failed to get course")
+		return
+	}
+
+	tagsResp := make([]TagResponse, 0, len(course.Tags))
+	for _, t := range course.Tags {
+		tagsResp = append(tagsResp, TagResponse{
+			ID:   t.ID,
+			Name: t.Name,
+			Slug: t.Slug,
+		})
+	}
+
+	resp := CourseDetailResponse{
+		ID:              course.ID,
+		AuthorID:        course.AuthorID,
+		SubjectID:       course.SubjectID,
+		Title:           course.Title,
+		Description:     course.Description,
+		DifficultyLevel: course.DifficultyLevel,
+		CoverImageURL:   course.CoverImageURL,
+		IsPublished:     course.IsPublished,
+		Tags:            tagsResp,
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 type UpdateCourseRequest struct {

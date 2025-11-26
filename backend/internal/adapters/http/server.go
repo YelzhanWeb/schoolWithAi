@@ -93,6 +93,7 @@ func (s *Server) setupRoutes() {
 			protected.PUT("/courses/:id", courseHandler.UpdateCourse)
 			protected.POST("/courses/:id/publish", courseHandler.ChangePublishStatus)
 			protected.GET("/courses/:id/structure", courseHandler.GetStructure)
+			protected.GET("/courses/:id", courseHandler.GetCourse)
 
 			protected.POST("/modules", courseHandler.CreateModule)
 			protected.PUT("/modules/:id", courseHandler.UpdateModule)
