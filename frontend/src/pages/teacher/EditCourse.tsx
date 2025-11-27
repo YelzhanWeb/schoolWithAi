@@ -21,7 +21,6 @@ export const EditCoursePage = () => {
   const [modules, setModules] = useState<Module[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
 
-  // Состояние для редактора урока
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [lessonData, setLessonData] = useState<Lesson | null>(null);
   const [isSaving, setIsSaving] = useState(false);

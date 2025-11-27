@@ -29,6 +29,8 @@ type CourseService interface {
 	DeleteLesson(ctx context.Context, userID, lessonID string) error
 
 	GetFullStructure(ctx context.Context, courseID string) ([]entities.Module, error)
+
+	GetAllTags(ctx context.Context) ([]entities.Tag, error)
 }
 
 type CourseHandler struct {
@@ -45,6 +47,7 @@ type CreateCourseRequest struct {
 	SubjectID       string `json:"subject_id"       binding:"required"`
 	DifficultyLevel int    `json:"difficulty_level" binding:"required,min=1,max=5"`
 	CoverImageURL   string `json:"cover_image_url"`
+	Tags            []int  `json:"tags"`
 }
 
 type CreateCourseResponse struct {
@@ -95,6 +98,10 @@ func (h *CourseHandler) CreateCourse(c *gin.Context) {
 	}
 	course.Description = req.Description
 	course.CoverImageURL = req.CoverImageURL
+
+	for _, tagID := range req.Tags {
+		course.Tags = append(course.Tags, entities.Tag{ID: tagID})
+	}
 
 	err = h.courseService.CreateCourse(c.Request.Context(), course)
 	if err != nil {
@@ -185,6 +192,7 @@ type UpdateCourseRequest struct {
 	Description     string `json:"description"`
 	DifficultyLevel int    `json:"difficulty_level"`
 	CoverImageURL   string `json:"cover_image_url"`
+	Tags            []int  `json:"tags"`
 }
 
 // UpdateCourse godoc
@@ -224,6 +232,10 @@ func (h *CourseHandler) UpdateCourse(c *gin.Context) {
 		Description:     req.Description,
 		DifficultyLevel: req.DifficultyLevel,
 		CoverImageURL:   req.CoverImageURL,
+	}
+
+	for _, tagID := range req.Tags {
+		updates.Tags = append(updates.Tags, entities.Tag{ID: tagID})
 	}
 
 	if err := h.courseService.UpdateCourse(c.Request.Context(), courseID, updates); err != nil {
@@ -420,6 +432,7 @@ type CreateLessonRequest struct {
 	VideoURL          string `json:"video_url"`
 	FileAttachmentURL string `json:"file_attachment_url"`
 	OrderIndex        int    `json:"order_index"         binding:"required"`
+	XPReward          int    `json:"xp_reward"`
 }
 
 type CreateLessonResponse struct {
@@ -448,6 +461,10 @@ func (h *CourseHandler) CreateLesson(c *gin.Context) {
 	lesson.ContentText = req.ContentText
 	lesson.VideoURL = req.VideoURL
 	lesson.FileAttachmentURL = req.FileAttachmentURL
+
+	if req.XPReward > 0 {
+		lesson.XPReward = req.XPReward
+	}
 
 	if err := h.courseService.CreateLesson(c.Request.Context(), userID, lesson); err != nil {
 		c.Status(http.StatusInternalServerError)
@@ -520,6 +537,7 @@ type UpdateLessonRequest struct {
 	VideoURL          string `json:"video_url"`
 	FileAttachmentURL string `json:"file_attachment_url"`
 	OrderIndex        int    `json:"order_index"`
+	XPReward          int    `json:"xp_reward"`
 }
 
 // UpdateLesson godoc
@@ -551,6 +569,10 @@ func (h *CourseHandler) UpdateLesson(c *gin.Context) {
 		VideoURL:          req.VideoURL,
 		FileAttachmentURL: req.FileAttachmentURL,
 		OrderIndex:        req.OrderIndex,
+	}
+
+	if req.XPReward > 0 {
+		lesson.XPReward = req.XPReward
 	}
 
 	if err := h.courseService.UpdateLesson(c.Request.Context(), userID, lesson); err != nil {
@@ -625,4 +647,38 @@ func (h *CourseHandler) GetStructure(c *gin.Context) {
 	log.Info().
 		Str("course_id", courseID).
 		Msg("course structure got successfully")
+}
+
+type GetAllTagsResponse struct {
+	Tags []TagResponse `json:"tags"`
+}
+
+// GetTags godoc
+// @Summary Get all tags
+// @Description Get list of available tags
+// @Tags tags
+// @Produce json
+// @Success 200 {object} GetAllTagsResponse
+// @Failure 500
+// @Router /v1/tags [get]
+func (h *CourseHandler) GetTags(c *gin.Context) {
+	tags, err := h.courseService.GetAllTags(c.Request.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get all tags")
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	tagsResp := make([]TagResponse, 0, len(tags))
+	for _, t := range tags {
+		tagsResp = append(tagsResp, TagResponse{
+			ID:   t.ID,
+			Name: t.Name,
+			Slug: t.Slug,
+		})
+	}
+
+	c.JSON(http.StatusOK, GetAllTagsResponse{
+		Tags: tagsResp,
+	})
 }

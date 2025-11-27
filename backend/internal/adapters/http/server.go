@@ -73,7 +73,9 @@ func (s *Server) setupRoutes() {
 		courseHandler := handlers.NewCourseHandler(s.courseService)
 		subjectHandler := handlers.NewSubjectHandler(s.subjectService)
 		uploadHandler := handlers.NewUploadHandler(s.uploadService)
+
 		api.GET("/subjects", subjectHandler.GetAllSubjects)
+		api.GET("/tags", courseHandler.GetTags)
 
 		auth := api.Group("/auth")
 		{

@@ -22,6 +22,8 @@ type CourseRepository interface {
 	GetLessonByID(ctx context.Context, lessonID string) (*entities.Lesson, error)
 	UpdateLesson(ctx context.Context, lesson *entities.Lesson) error
 	DeleteLesson(ctx context.Context, id string) error
+
+	GetAllTags(ctx context.Context) ([]entities.Tag, error)
 }
 
 type CourseService struct {
@@ -171,4 +173,8 @@ func (s *CourseService) DeleteLesson(ctx context.Context, userID, lessonID strin
 
 func (s *CourseService) GetFullStructure(ctx context.Context, courseID string) ([]entities.Module, error) {
 	return s.repo.GetCourseStructure(ctx, courseID)
+}
+
+func (s *CourseService) GetAllTags(ctx context.Context) ([]entities.Tag, error) {
+	return s.repo.GetAllTags(ctx)
 }
