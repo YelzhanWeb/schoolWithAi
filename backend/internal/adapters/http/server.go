@@ -10,6 +10,7 @@ import (
 	"backend/internal/services/auth"
 	"backend/internal/services/course"
 	"backend/internal/services/subject"
+	"backend/internal/services/testing"
 	"backend/pkg/jwt"
 
 	_ "backend/docs"
@@ -27,6 +28,7 @@ type Server struct {
 	courseService  *course.CourseService
 	subjectService *subject.SubjectService
 	uploadService  *storage.MinioStorage
+	testService    *testing.TestService
 	jwtManager     *jwt.JWTManager
 	mlServiceURL   string
 }
@@ -36,6 +38,7 @@ func NewServer(
 	courseService *course.CourseService,
 	subjectService *subject.SubjectService,
 	uploadService *storage.MinioStorage,
+	testService *testing.TestService,
 	jwtSecret string,
 	mlServiceURL string,
 ) *Server {
@@ -48,6 +51,7 @@ func NewServer(
 		courseService:  courseService,
 		subjectService: subjectService,
 		uploadService:  uploadService,
+		testService:    testService,
 		jwtManager:     jwt.NewJWTManager(jwtSecret),
 		mlServiceURL:   mlServiceURL,
 	}
@@ -73,6 +77,7 @@ func (s *Server) setupRoutes() {
 		courseHandler := handlers.NewCourseHandler(s.courseService)
 		subjectHandler := handlers.NewSubjectHandler(s.subjectService)
 		uploadHandler := handlers.NewUploadHandler(s.uploadService)
+		testHandler := handlers.NewTestHandler(s.testService)
 
 		api.GET("/subjects", subjectHandler.GetAllSubjects)
 		api.GET("/tags", courseHandler.GetTags)
@@ -104,6 +109,9 @@ func (s *Server) setupRoutes() {
 			protected.POST("/lessons", courseHandler.CreateLesson)
 			protected.GET("/lessons/:id", courseHandler.GetLesson)
 			protected.PUT("/lessons/:id", courseHandler.UpdateLesson)
+
+			protected.POST("/tests", testHandler.CreateTest)
+			protected.GET("/modules/:id/test", testHandler.GetTest)
 		}
 	}
 }

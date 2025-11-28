@@ -297,6 +297,53 @@ const docTemplate = `{
             }
         },
         "/v1/courses/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get details of a specific course by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "courses"
+                ],
+                "summary": "Get course details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Course ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.CourseDetailResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -702,6 +749,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/modules/{id}/test": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get test structure with questions and answers",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tests"
+                ],
+                "summary": "Get test details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Module ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.CreateTestResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
         "/v1/subjects": {
             "get": {
                 "description": "Get list of available subjects",
@@ -718,15 +814,95 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/backend_internal_entities.Subject"
+                                "$ref": "#/definitions/internal_adapters_http_handlers.GetAllSubjectsResponse"
                             }
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/v1/tags": {
+            "get": {
+                "description": "Get list of available tags",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "Get all tags",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.GetAllTagsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/v1/tests": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a test (Teacher/Admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tests"
+                ],
+                "summary": "Create a new test",
+                "parameters": [
+                    {
+                        "description": "Test data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.CreateTestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.CreateTestResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/internal_adapters_http_handlers.ErrorResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
                     }
                 }
             }
@@ -789,23 +965,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "backend_internal_entities.Subject": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "nameKz": {
-                    "type": "string"
-                },
-                "nameRu": {
-                    "type": "string"
-                },
-                "slug": {
-                    "type": "string"
-                }
-            }
-        },
         "internal_adapters_http_handlers.ChangePasswordRequest": {
             "type": "object",
             "required": [
@@ -822,6 +981,55 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_adapters_http_handlers.CourseDetailResponse": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "string"
+                },
+                "cover_image_url": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "difficulty_level": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_published": {
+                    "type": "boolean"
+                },
+                "subject_id": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_adapters_http_handlers.TagResponse"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_adapters_http_handlers.CreateAnswerRequest": {
+            "type": "object",
+            "required": [
+                "text"
+            ],
+            "properties": {
+                "is_correct": {
+                    "type": "boolean"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_adapters_http_handlers.CreateCourseRequest": {
             "type": "object",
             "required": [
@@ -830,6 +1038,9 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "cover_image_url": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -840,6 +1051,12 @@ const docTemplate = `{
                 },
                 "subject_id": {
                     "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "title": {
                     "type": "string"
@@ -879,6 +1096,9 @@ const docTemplate = `{
                 },
                 "video_url": {
                     "type": "string"
+                },
+                "xp_reward": {
+                    "type": "integer"
                 }
             }
         },
@@ -923,12 +1143,93 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_adapters_http_handlers.CreateQuestionRequest": {
+            "type": "object",
+            "required": [
+                "answers",
+                "question_type",
+                "text"
+            ],
+            "properties": {
+                "answers": {
+                    "type": "array",
+                    "minItems": 2,
+                    "items": {
+                        "$ref": "#/definitions/internal_adapters_http_handlers.CreateAnswerRequest"
+                    }
+                },
+                "question_type": {
+                    "description": "single_choice",
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_adapters_http_handlers.CreateTestRequest": {
+            "type": "object",
+            "required": [
+                "module_id",
+                "passing_score",
+                "questions",
+                "title"
+            ],
+            "properties": {
+                "module_id": {
+                    "type": "string"
+                },
+                "passing_score": {
+                    "type": "integer"
+                },
+                "questions": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/internal_adapters_http_handlers.CreateQuestionRequest"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_adapters_http_handlers.CreateTestResponse": {
+            "type": "object",
+            "properties": {
+                "test_id": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_adapters_http_handlers.ErrorResponse": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
                     "example": "something went wrong"
+                }
+            }
+        },
+        "internal_adapters_http_handlers.GetAllSubjectsResponse": {
+            "type": "object",
+            "properties": {
+                "subjects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_adapters_http_handlers.SubjectResponse"
+                    }
+                }
+            }
+        },
+        "internal_adapters_http_handlers.GetAllTagsResponse": {
+            "type": "object",
+            "properties": {
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_adapters_http_handlers.TagResponse"
+                    }
                 }
             }
         },
@@ -1069,6 +1370,37 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_adapters_http_handlers.SubjectResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name_kz": {
+                    "type": "string"
+                },
+                "name_ru": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_adapters_http_handlers.TagResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_adapters_http_handlers.UpdateCourseRequest": {
             "type": "object",
             "properties": {
@@ -1080,6 +1412,12 @@ const docTemplate = `{
                 },
                 "difficulty_level": {
                     "type": "integer"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "title": {
                     "type": "string"
@@ -1103,6 +1441,9 @@ const docTemplate = `{
                 },
                 "video_url": {
                     "type": "string"
+                },
+                "xp_reward": {
+                    "type": "integer"
                 }
             }
         },

@@ -12,11 +12,29 @@ import (
 )
 
 type TestRepository struct {
-	pool *pgxpool.Pool
+	connectionURL string
+	pool          *pgxpool.Pool
 }
 
-func NewTestRepository(pool *pgxpool.Pool) *TestRepository {
-	return &TestRepository{pool: pool}
+func NewTestRepository(connectionURL string) *TestRepository {
+	return &TestRepository{connectionURL: connectionURL}
+}
+
+func (r *TestRepository) Connect(ctx context.Context) error {
+	p, err := pgxpool.New(ctx, r.connectionURL)
+	if err != nil {
+		return fmt.Errorf("pgxpool new: %w", err)
+	}
+
+	r.pool = p
+
+	return nil
+}
+
+func (r *TestRepository) Close() {
+	if r.pool != nil {
+		r.pool.Close()
+	}
 }
 
 func (r *TestRepository) CreateTest(ctx context.Context, test *entities.Test) error {

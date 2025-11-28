@@ -134,7 +134,6 @@ type TestResponse struct {
 // @Produce json
 // @Param id path string true "Module ID"
 // @Success 201 {object} CreateTestResponse
-// @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 404
 // @Failure 500

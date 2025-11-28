@@ -1,15 +1,4 @@
 definitions:
-  backend_internal_entities.Subject:
-    properties:
-      id:
-        type: string
-      nameKz:
-        type: string
-      nameRu:
-        type: string
-      slug:
-        type: string
-    type: object
   internal_adapters_http_handlers.ChangePasswordRequest:
     properties:
       new_password:
@@ -21,8 +10,42 @@ definitions:
     - new_password
     - old_password
     type: object
+  internal_adapters_http_handlers.CourseDetailResponse:
+    properties:
+      author_id:
+        type: string
+      cover_image_url:
+        type: string
+      description:
+        type: string
+      difficulty_level:
+        type: integer
+      id:
+        type: string
+      is_published:
+        type: boolean
+      subject_id:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/internal_adapters_http_handlers.TagResponse'
+        type: array
+      title:
+        type: string
+    type: object
+  internal_adapters_http_handlers.CreateAnswerRequest:
+    properties:
+      is_correct:
+        type: boolean
+      text:
+        type: string
+    required:
+    - text
+    type: object
   internal_adapters_http_handlers.CreateCourseRequest:
     properties:
+      cover_image_url:
+        type: string
       description:
         type: string
       difficulty_level:
@@ -31,6 +54,10 @@ definitions:
         type: integer
       subject_id:
         type: string
+      tags:
+        items:
+          type: integer
+        type: array
       title:
         type: string
     required:
@@ -57,6 +84,8 @@ definitions:
         type: string
       video_url:
         type: string
+      xp_reward:
+        type: integer
     required:
     - module_id
     - order_index
@@ -89,11 +118,66 @@ definitions:
     required:
     - module_id
     type: object
+  internal_adapters_http_handlers.CreateQuestionRequest:
+    properties:
+      answers:
+        items:
+          $ref: '#/definitions/internal_adapters_http_handlers.CreateAnswerRequest'
+        minItems: 2
+        type: array
+      question_type:
+        description: single_choice
+        type: string
+      text:
+        type: string
+    required:
+    - answers
+    - question_type
+    - text
+    type: object
+  internal_adapters_http_handlers.CreateTestRequest:
+    properties:
+      module_id:
+        type: string
+      passing_score:
+        type: integer
+      questions:
+        items:
+          $ref: '#/definitions/internal_adapters_http_handlers.CreateQuestionRequest'
+        minItems: 1
+        type: array
+      title:
+        type: string
+    required:
+    - module_id
+    - passing_score
+    - questions
+    - title
+    type: object
+  internal_adapters_http_handlers.CreateTestResponse:
+    properties:
+      test_id:
+        type: string
+    type: object
   internal_adapters_http_handlers.ErrorResponse:
     properties:
       message:
         example: something went wrong
         type: string
+    type: object
+  internal_adapters_http_handlers.GetAllSubjectsResponse:
+    properties:
+      subjects:
+        items:
+          $ref: '#/definitions/internal_adapters_http_handlers.SubjectResponse'
+        type: array
+    type: object
+  internal_adapters_http_handlers.GetAllTagsResponse:
+    properties:
+      tags:
+        items:
+          $ref: '#/definitions/internal_adapters_http_handlers.TagResponse'
+        type: array
     type: object
   internal_adapters_http_handlers.GetStructureResponse:
     properties:
@@ -186,6 +270,26 @@ definitions:
     - new_password
     - old_password
     type: object
+  internal_adapters_http_handlers.SubjectResponse:
+    properties:
+      id:
+        type: string
+      name_kz:
+        type: string
+      name_ru:
+        type: string
+      slug:
+        type: string
+    type: object
+  internal_adapters_http_handlers.TagResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
   internal_adapters_http_handlers.UpdateCourseRequest:
     properties:
       cover_image_url:
@@ -194,6 +298,10 @@ definitions:
         type: string
       difficulty_level:
         type: integer
+      tags:
+        items:
+          type: integer
+        type: array
       title:
         type: string
     type: object
@@ -209,6 +317,8 @@ definitions:
         type: string
       video_url:
         type: string
+      xp_reward:
+        type: integer
     type: object
   internal_adapters_http_handlers.UpdateModuleRequest:
     properties:
@@ -412,6 +522,36 @@ paths:
       tags:
       - courses
   /v1/courses/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific course by ID
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.CourseDetailResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get course details
+      tags:
+      - courses
     put:
       consumes:
       - application/json
@@ -665,6 +805,37 @@ paths:
       summary: Update module
       tags:
       - modules
+  /v1/modules/{id}/test:
+    get:
+      consumes:
+      - application/json
+      description: Get test structure with questions and answers
+      parameters:
+      - description: Module ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.CreateTestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Get test details
+      tags:
+      - tests
   /v1/subjects:
     get:
       description: Get list of available subjects
@@ -675,15 +846,66 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/backend_internal_entities.Subject'
+              $ref: '#/definitions/internal_adapters_http_handlers.GetAllSubjectsResponse'
             type: array
         "500":
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
       summary: Get all subjects
       tags:
       - subjects
+  /v1/tags:
+    get:
+      description: Get list of available tags
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.GetAllTagsResponse'
+        "500":
+          description: Internal Server Error
+      summary: Get all tags
+      tags:
+      - tags
+  /v1/tests:
+    post:
+      consumes:
+      - application/json
+      description: Create a test (Teacher/Admin only)
+      parameters:
+      - description: Test data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.CreateTestRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.CreateTestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Create a new test
+      tags:
+      - tests
   /v1/upload:
     post:
       consumes:

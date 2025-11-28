@@ -16,9 +16,11 @@ import (
 
 	"backend/internal/adapters/postgres/course"
 	"backend/internal/adapters/postgres/subject"
+	"backend/internal/adapters/postgres/testing"
 	"backend/internal/adapters/postgres/user"
 	courseService "backend/internal/services/course"
 	subjectService "backend/internal/services/subject"
+	testService "backend/internal/services/testing"
 
 	"backend/pkg/jwt"
 
@@ -71,6 +73,12 @@ func main() {
 	}
 	defer courseRepo.Close()
 
+	testRepo := testing.NewTestRepository(connectionURL)
+	if err := courseRepo.Connect(ctx); err != nil {
+		log.Fatalf("Failed to connect course repo: %v", err)
+	}
+	defer courseRepo.Close()
+
 	log.Println("All repositories connected")
 
 	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
@@ -91,12 +99,13 @@ func main() {
 	authService := auth.NewAuthService(userRepo, jwtManager, minioStorage)
 	subjService := subjectService.NewSubjectService(subjectRepo)
 	cService := courseService.NewCourseService(courseRepo)
-
+	testService := testService.NewTestService(testRepo)
 	httpServer := http.NewServer(
 		authService,
 		cService,
 		subjService,
 		minioStorage,
+		testService,
 		cfg.JWTSecret,
 		mlServiceURL,
 	)
