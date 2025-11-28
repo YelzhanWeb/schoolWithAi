@@ -1,28 +1,55 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { coursesApi } from "../../api/courses";
-import type { Course } from "../../api/courses";
 import { uploadApi } from "../../api/upload";
 import { subjectsApi } from "../../api/subjects";
-import type { Module, Lesson } from "../../types/course";
+import {
+  testsApi,
+  type Test,
+  type Question,
+  type Answer,
+} from "../../api/tests";
+import type {
+  Module,
+  Lesson,
+  Tag,
+  Course,
+  CreateLessonRequest,
+} from "../../types/course";
 import type { Subject } from "../../types/subject";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Trash2, Settings, BookOpen, ChevronLeft } from "lucide-react"; // Иконки
+import {
+  Trash2,
+  Settings,
+  BookOpen,
+  ChevronLeft,
+  Plus,
+  FileText,
+} from "lucide-react";
+
+type Tab = "curriculum" | "settings";
 
 export const EditCoursePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<"curriculum" | "settings">(
-    "curriculum"
-  );
+  const [activeTab, setActiveTab] = useState<Tab>("curriculum");
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<number[]>([]);
 
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [lessonData, setLessonData] = useState<Lesson | null>(null);
+
+  const [selectedModuleForTest, setSelectedModuleForTest] = useState<
+    string | null
+  >(null);
+  const [testData, setTestData] = useState<Test | null>(null);
+  const [isCreatingTest, setIsCreatingTest] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -30,6 +57,7 @@ export const EditCoursePage = () => {
       loadCourseData();
       loadStructure();
       loadSubjects();
+      loadTags();
     }
   }, [id]);
 
@@ -38,6 +66,10 @@ export const EditCoursePage = () => {
     try {
       const data = await coursesApi.getById(id);
       setCourse(data);
+      // Извлекаем ID тегов если они есть
+      if (data.tags) {
+        setSelectedTags(data.tags.map((t: Tag) => t.id));
+      }
     } catch (e) {
       console.error("Failed to load course info", e);
     }
@@ -62,16 +94,23 @@ export const EditCoursePage = () => {
     }
   };
 
-  // --- ЛОГИКА УРОКОВ ---
+  const loadTags = async () => {
+    try {
+      const list = await coursesApi.getAllTags();
+      setTags(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // === ЛОГИКА УРОКОВ ===
   useEffect(() => {
     const fetchLesson = async () => {
       if (!selectedLessonId) {
         setLessonData(null);
         return;
       }
-      // СБРОС ДАННЫХ ПРИ ПЕРЕКЛЮЧЕНИИ (Fix бага с залипанием)
       setLessonData(null);
-
       try {
         const data = await coursesApi.getLesson(selectedLessonId);
         setLessonData(data);
@@ -82,12 +121,9 @@ export const EditCoursePage = () => {
     fetchLesson();
   }, [selectedLessonId]);
 
-  // --- ДЕЙСТВИЯ (Create / Delete) ---
-
   const handleAddModule = async () => {
     const title = prompt("Название модуля:");
     if (!title || !id) return;
-    // Безопасное получение длины (Fix красной ошибки)
     await coursesApi.createModule(id, title, (modules?.length || 0) + 1);
     loadStructure();
   };
@@ -99,7 +135,7 @@ export const EditCoursePage = () => {
       return;
     await coursesApi.deleteModule(moduleId);
     if (lessonData && lessonData.module_id === moduleId) {
-      setSelectedLessonId(null); // Закрываем редактор если удалили текущий модуль
+      setSelectedLessonId(null);
     }
     loadStructure();
   };
@@ -107,8 +143,24 @@ export const EditCoursePage = () => {
   const handleAddLesson = async (moduleId: string, count: number) => {
     const title = prompt("Название урока:");
     if (!title) return;
-    await coursesApi.createLesson(moduleId, title, count + 1);
-    loadStructure();
+
+    const lessonData: CreateLessonRequest = {
+      module_id: moduleId,
+      title: title,
+      order_index: count + 1,
+      content_text: "",
+      video_url: "",
+      file_attachment_url: "",
+      xp_reward: 0,
+    };
+
+    try {
+      await coursesApi.createLesson(lessonData);
+      loadStructure();
+    } catch (error) {
+      console.error("Ошибка создания урока:", error);
+      alert("Не удалось создать урок");
+    }
   };
 
   const handleDeleteLesson = async (lessonId: string) => {
@@ -118,7 +170,6 @@ export const EditCoursePage = () => {
     loadStructure();
   };
 
-  // --- ЗАГРУЗКА С АВТОСОХРАНЕНИЕМ (Fix бага с URL) ---
   const handleUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     field: "video_url" | "file_attachment_url"
@@ -126,21 +177,10 @@ export const EditCoursePage = () => {
     if (e.target.files?.[0] && lessonData) {
       try {
         setIsSaving(true);
-        // 1. Грузим в MinIO
         const url = await uploadApi.uploadFile(e.target.files[0], "lesson");
-
-        // 2. Обновляем локально
         const updated = { ...lessonData, [field]: url };
         setLessonData(updated);
-
-        // 3. Сразу пишем в базу (Auto-save)
-        await coursesApi.updateLesson(lessonData.id, {
-          title: updated.title,
-          content_text: updated.content_text,
-          video_url: updated.video_url,
-          file_attachment_url: updated.file_attachment_url,
-          order_index: updated.order_index,
-        });
+        await coursesApi.updateLesson(lessonData.id, updated);
       } catch {
         alert("Ошибка загрузки");
       } finally {
@@ -163,7 +203,120 @@ export const EditCoursePage = () => {
     }
   };
 
-  // --- ЛОГИКА НАСТРОЕК КУРСА ---
+  // === ЛОГИКА ТЕСТОВ ===
+  const handleOpenTestEditor = async (moduleId: string) => {
+    setSelectedModuleForTest(moduleId);
+    setSelectedLessonId(null); // Закрываем редактор урока
+    setIsCreatingTest(false);
+
+    try {
+      const test = await testsApi.getByModuleId(moduleId);
+      setTestData(test);
+    } catch {
+      // Теста нет — предложим создать
+      setTestData(null);
+    }
+  };
+
+  const handleCreateTest = () => {
+    setIsCreatingTest(true);
+    setTestData({
+      test_id: "",
+      title: "Новый тест",
+      passing_score: 70,
+      questions: [
+        {
+          text: "",
+          question_type: "single_choice",
+          answers: [
+            { text: "", is_correct: false },
+            { text: "", is_correct: false },
+          ],
+        },
+      ],
+    });
+  };
+
+  const handleSaveTest = async () => {
+    if (!testData || !selectedModuleForTest) return;
+    setIsSaving(true);
+    try {
+      await testsApi.create({
+        module_id: selectedModuleForTest,
+        title: testData.title,
+        passing_score: testData.passing_score,
+        questions: testData.questions,
+      });
+      alert("Тест создан!");
+      setIsCreatingTest(false);
+      handleOpenTestEditor(selectedModuleForTest); // Перезагружаем
+    } catch (error) {
+      console.error(error);
+      alert("Ошибка создания теста");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const addQuestion = () => {
+    if (!testData) return;
+    setTestData({
+      ...testData,
+      questions: [
+        ...testData.questions,
+        {
+          text: "",
+          question_type: "single_choice",
+          answers: [
+            { text: "", is_correct: false },
+            { text: "", is_correct: false },
+          ],
+        },
+      ],
+    });
+  };
+
+  const updateQuestion = (
+    index: number,
+    field: keyof Question,
+    value: string
+  ) => {
+    if (!testData) return;
+    const updated = [...testData.questions];
+    updated[index] = { ...updated[index], [field]: value };
+    setTestData({ ...testData, questions: updated });
+  };
+
+  const addAnswer = (qIndex: number) => {
+    if (!testData) return;
+    const updated = [...testData.questions];
+    updated[qIndex].answers.push({ text: "", is_correct: false });
+    setTestData({ ...testData, questions: updated });
+  };
+
+  const updateAnswer = (
+    qIndex: number,
+    aIndex: number,
+    field: keyof Answer,
+    value: string | boolean
+  ) => {
+    if (!testData) return;
+    const updated = [...testData.questions];
+    updated[qIndex].answers[aIndex] = {
+      ...updated[qIndex].answers[aIndex],
+      [field]: value,
+    };
+    setTestData({ ...testData, questions: updated });
+  };
+
+  const deleteAnswer = (qIndex: number, aIndex: number) => {
+    if (!testData) return;
+    const updated = [...testData.questions];
+    updated[qIndex].answers.splice(aIndex, 1);
+    setTestData({ ...testData, questions: updated });
+  };
+
+  // === ЛОГИКА НАСТРОЕК КУРСА ===
   const handleUpdateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!course) return;
@@ -172,9 +325,9 @@ export const EditCoursePage = () => {
       await coursesApi.update(course.id, {
         title: course.title,
         description: course.description,
-        subject_id: course.subject_id,
         difficulty_level: course.difficulty_level,
         cover_image_url: course.cover_image_url,
+        tags: selectedTags,
       });
       alert("Настройки курса обновлены");
     } catch {
@@ -209,6 +362,14 @@ export const EditCoursePage = () => {
       const url = await uploadApi.uploadFile(e.target.files[0], "cover");
       setCourse({ ...course, cover_image_url: url });
     }
+  };
+
+  const toggleTag = (tagId: number) => {
+    setSelectedTags((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId]
+    );
   };
 
   if (!course) return <div className="p-10 text-center">Загрузка курса...</div>;
@@ -278,12 +439,21 @@ export const EditCoursePage = () => {
               >
                 <div className="bg-gray-50 p-3 font-medium text-gray-700 flex justify-between items-center">
                   <span>{module.title}</span>
-                  <button
-                    onClick={() => handleDeleteModule(module.id)}
-                    className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={() => handleOpenTestEditor(module.id)}
+                      className="text-blue-500 hover:text-blue-700"
+                      title="Редактировать тест"
+                    >
+                      <FileText size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteModule(module.id)}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
                 <div className="divide-y">
                   {module.lessons?.map((lesson) => (
@@ -291,12 +461,12 @@ export const EditCoursePage = () => {
                       key={lesson.id}
                       onClick={() => setSelectedLessonId(lesson.id)}
                       className={`p-3 cursor-pointer flex justify-between items-center text-sm hover:bg-indigo-50 group/lesson
-                                        ${
-                                          selectedLessonId === lesson.id
-                                            ? "bg-indigo-50 text-indigo-700 border-l-2 border-indigo-600"
-                                            : "text-gray-600"
-                                        }
-                                    `}
+                        ${
+                          selectedLessonId === lesson.id
+                            ? "bg-indigo-50 text-indigo-700 border-l-2 border-indigo-600"
+                            : "text-gray-600"
+                        }
+                      `}
                     >
                       <span className="truncate">📄 {lesson.title}</span>
                       <button
@@ -310,7 +480,6 @@ export const EditCoursePage = () => {
                       </button>
                     </div>
                   ))}
-                  {/* Fix красной ошибки: || 0 */}
                   <button
                     onClick={() =>
                       handleAddLesson(module.id, module.lessons?.length || 0)
@@ -340,7 +509,7 @@ export const EditCoursePage = () => {
                     Редактирование урока
                   </h2>
                   <Button
-                    onClick={() => handleSaveLesson()}
+                    onClick={handleSaveLesson}
                     isLoading={isSaving}
                     className="w-auto"
                   >
@@ -352,6 +521,19 @@ export const EditCoursePage = () => {
                   value={lessonData.title}
                   onChange={(e) =>
                     setLessonData({ ...lessonData, title: e.target.value })
+                  }
+                />
+
+                {/* XP награда */}
+                <Input
+                  label="XP награда"
+                  type="number"
+                  value={lessonData.xp_reward}
+                  onChange={(e) =>
+                    setLessonData({
+                      ...lessonData,
+                      xp_reward: Number(e.target.value),
+                    })
                   }
                 />
 
@@ -367,7 +549,6 @@ export const EditCoursePage = () => {
                       className="w-full h-48 bg-black rounded mb-2 object-contain"
                     />
                   )}
-                  {/* Fix залипания: key с id урока */}
                   <input
                     key={`vid-${lessonData.id}`}
                     type="file"
@@ -391,7 +572,6 @@ export const EditCoursePage = () => {
                       📎 Скачать текущий файл
                     </a>
                   )}
-                  {/* Fix залипания: key с id урока */}
                   <input
                     key={`file-${lessonData.id}`}
                     type="file"
@@ -413,10 +593,151 @@ export const EditCoursePage = () => {
                   placeholder="# Markdown контент..."
                 />
               </div>
+            ) : selectedModuleForTest ? (
+              // РЕДАКТОР ТЕСТА
+              <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm p-8 space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {isCreatingTest ? "Создание теста" : "Редактирование теста"}
+                  </h2>
+                  <div className="flex gap-2">
+                    {!testData && !isCreatingTest && (
+                      <Button onClick={handleCreateTest} className="w-auto">
+                        Создать тест
+                      </Button>
+                    )}
+                    {isCreatingTest && (
+                      <Button
+                        onClick={handleSaveTest}
+                        isLoading={isSaving}
+                        className="w-auto"
+                      >
+                        Сохранить тест
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {testData && (
+                  <div className="space-y-6">
+                    <Input
+                      label="Название теста"
+                      value={testData.title}
+                      onChange={(e) =>
+                        setTestData({ ...testData, title: e.target.value })
+                      }
+                      disabled={!isCreatingTest}
+                    />
+                    <Input
+                      label="Проходной балл (%)"
+                      type="number"
+                      value={testData.passing_score}
+                      onChange={(e) =>
+                        setTestData({
+                          ...testData,
+                          passing_score: Number(e.target.value),
+                        })
+                      }
+                      disabled={!isCreatingTest}
+                    />
+
+                    <div className="space-y-4">
+                      <h3 className="font-bold">Вопросы:</h3>
+                      {testData.questions.map((q, qIndex) => (
+                        <div
+                          key={qIndex}
+                          className="border rounded-lg p-4 space-y-3 bg-gray-50"
+                        >
+                          <Input
+                            label={`Вопрос ${qIndex + 1}`}
+                            value={q.text}
+                            onChange={(e) =>
+                              updateQuestion(qIndex, "text", e.target.value)
+                            }
+                            disabled={!isCreatingTest}
+                          />
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium">
+                              Ответы:
+                            </label>
+                            {q.answers.map((a, aIndex) => (
+                              <div
+                                key={aIndex}
+                                className="flex items-center gap-2"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={a.is_correct}
+                                  onChange={(e) =>
+                                    updateAnswer(
+                                      qIndex,
+                                      aIndex,
+                                      "is_correct",
+                                      e.target.checked
+                                    )
+                                  }
+                                  disabled={!isCreatingTest}
+                                  className="w-5 h-5"
+                                />
+                                <Input
+                                  placeholder="Текст ответа"
+                                  value={a.text}
+                                  onChange={(e) =>
+                                    updateAnswer(
+                                      qIndex,
+                                      aIndex,
+                                      "text",
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={!isCreatingTest}
+                                  className="flex-1"
+                                />
+                                {isCreatingTest && q.answers.length > 2 && (
+                                  <button
+                                    onClick={() => deleteAnswer(qIndex, aIndex)}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            {isCreatingTest && (
+                              <button
+                                onClick={() => addAnswer(qIndex)}
+                                className="text-indigo-600 text-sm hover:underline"
+                              >
+                                + Добавить ответ
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {isCreatingTest && (
+                        <Button
+                          onClick={addQuestion}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          <Plus size={16} /> Добавить вопрос
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {!testData && !isCreatingTest && (
+                  <div className="text-center text-gray-400 py-10">
+                    <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                    <p>Для этого модуля теста ещё нет</p>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-gray-400">
                 <div className="text-6xl mb-4">👈</div>
-                <p className="text-xl">Выберите урок в меню слева</p>
+                <p className="text-xl">Выберите урок или тест в меню слева</p>
               </div>
             )}
           </main>
@@ -512,6 +833,27 @@ export const EditCoursePage = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* ТЕГИ */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Теги</label>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                        selectedTags.includes(tag.id)
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
                 </div>
               </div>
 

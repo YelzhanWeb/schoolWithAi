@@ -6,51 +6,66 @@ import { subjectsApi } from "../../api/subjects";
 import { uploadApi } from "../../api/upload";
 import { useNavigate } from "react-router-dom";
 import type { Subject } from "../../types/subject";
+import type { Tag } from "../../types/course";
 
 export const CreateCoursePage = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<number[]>([]);
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     subject_id: "",
     difficulty_level: 1,
-    cover_image_url: "", // Ссылка на картинку
+    cover_image_url: "",
   });
 
-  // Загружаем предметы при старте
   useEffect(() => {
-    const fetchSubjects = async () => {
+    const fetchData = async () => {
       try {
-        const list = await subjectsApi.getAll();
-        setSubjects(list);
-        if (list.length > 0) {
-          setFormData((prev) => ({ ...prev, subject_id: list[0].id }));
+        const [subjectsList, tagsList] = await Promise.all([
+          subjectsApi.getAll(),
+          coursesApi.getAllTags(),
+        ]);
+
+        setSubjects(subjectsList);
+        setTags(tagsList);
+
+        if (subjectsList.length > 0) {
+          setFormData((prev) => ({ ...prev, subject_id: subjectsList[0].id }));
         }
       } catch (error) {
-        console.error("Не удалось загрузить предметы: ", error);
+        console.error("Ошибка загрузки данных:", error);
       }
     };
-    fetchSubjects();
+    fetchData();
   }, []);
 
-  // Обработка загрузки обложки
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       try {
-        setIsLoading(true); // Блокируем кнопку пока грузится
+        setIsLoading(true);
         const url = await uploadApi.uploadFile(e.target.files[0], "cover");
         setFormData((prev) => ({ ...prev, cover_image_url: url }));
       } catch (error) {
         alert("Ошибка загрузки изображения");
-        console.error("Ошибка загрузки изображения: ", error);
+        console.error("Ошибка загрузки изображения:", error);
       } finally {
         setIsLoading(false);
       }
     }
+  };
+
+  const toggleTag = (tagId: number) => {
+    setSelectedTags((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,9 +76,9 @@ export const CreateCoursePage = () => {
       const response = await coursesApi.create({
         ...formData,
         difficulty_level: Number(formData.difficulty_level),
+        tags: selectedTags,
       });
 
-      // После создания перекидываем в Редактор
       navigate(`/teacher/courses/${response.id}/edit`);
     } catch (error) {
       console.error(error);
@@ -132,7 +147,6 @@ export const CreateCoursePage = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {/* Выбор предмета */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Предмет
@@ -154,7 +168,6 @@ export const CreateCoursePage = () => {
             </select>
           </div>
 
-          {/* Сложность */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Сложность
@@ -175,6 +188,29 @@ export const CreateCoursePage = () => {
               <option value="4">4 - Хардкор</option>
               <option value="5">5 - Эксперт</option>
             </select>
+          </div>
+        </div>
+
+        {/* ТЕГИ */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Теги курса
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggleTag(tag.id)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                  selectedTags.includes(tag.id)
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {tag.name}
+              </button>
+            ))}
           </div>
         </div>
 
