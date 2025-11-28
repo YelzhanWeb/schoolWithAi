@@ -68,6 +68,7 @@ func (s *CourseService) UpdateCourse(ctx context.Context, courseID string, updat
 	existing.Description = updates.Description
 	existing.DifficultyLevel = updates.DifficultyLevel
 	existing.CoverImageURL = updates.CoverImageURL
+	existing.SubjectID = updates.SubjectID
 
 	return s.repo.UpdateCourse(ctx, existing)
 }

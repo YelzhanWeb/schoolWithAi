@@ -109,7 +109,8 @@ func (r *CourseRepository) UpdateCourse(ctx context.Context, course *entities.Co
             description = $3, 
             difficulty_level = $4, 
             cover_image_url = $5, 
-            is_published = $6
+            is_published = $6,
+			subject_id = $7,
         WHERE id = $1
     `
 
@@ -122,6 +123,7 @@ func (r *CourseRepository) UpdateCourse(ctx context.Context, course *entities.Co
 		d.DifficultyLevel,
 		d.CoverImageURL,
 		d.IsPublished,
+		d.SubjectID,
 	)
 	if err != nil {
 		return fmt.Errorf("update course: %w", err)

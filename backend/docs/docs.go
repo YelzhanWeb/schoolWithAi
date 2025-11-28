@@ -1413,6 +1413,9 @@ const docTemplate = `{
                 "difficulty_level": {
                     "type": "integer"
                 },
+                "subject_id": {
+                    "type": "string"
+                },
                 "tags": {
                     "type": "array",
                     "items": {

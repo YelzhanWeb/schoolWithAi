@@ -192,6 +192,7 @@ type UpdateCourseRequest struct {
 	Description     string `json:"description"`
 	DifficultyLevel int    `json:"difficulty_level"`
 	CoverImageURL   string `json:"cover_image_url"`
+	SubjectID       string `json:"subject_id"`
 	Tags            []int  `json:"tags"`
 }
 
@@ -232,6 +233,7 @@ func (h *CourseHandler) UpdateCourse(c *gin.Context) {
 		Description:     req.Description,
 		DifficultyLevel: req.DifficultyLevel,
 		CoverImageURL:   req.CoverImageURL,
+		SubjectID:       req.SubjectID,
 	}
 
 	for _, tagID := range req.Tags {
