@@ -325,6 +325,7 @@ export const EditCoursePage = () => {
       await coursesApi.update(course.id, {
         title: course.title,
         description: course.description,
+        subject_id: course.subject,
         difficulty_level: course.difficulty_level,
         cover_image_url: course.cover_image_url,
         tags: selectedTags,

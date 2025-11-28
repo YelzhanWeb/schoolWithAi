@@ -74,10 +74,10 @@ func main() {
 	defer courseRepo.Close()
 
 	testRepo := testing.NewTestRepository(connectionURL)
-	if err := courseRepo.Connect(ctx); err != nil {
+	if err := testRepo.Connect(ctx); err != nil {
 		log.Fatalf("Failed to connect course repo: %v", err)
 	}
-	defer courseRepo.Close()
+	defer testRepo.Close()
 
 	log.Println("All repositories connected")
 

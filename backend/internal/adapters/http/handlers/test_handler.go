@@ -151,6 +151,7 @@ func (h *TestHandler) GetTest(c *gin.Context) {
 		log.Error().Err(err).Str("module_id", moduleID).Msg("failed to get test by moduleID")
 		if errors.Is(err, entities.ErrNotFound) {
 			c.Status(http.StatusNotFound)
+			return
 		}
 		c.Status(http.StatusInternalServerError)
 		return

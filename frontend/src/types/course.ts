@@ -31,7 +31,7 @@ export interface Course {
   cover_image_url?: string;
   is_published: boolean;
   tags: Tag[];
-  subject?: { name_ru: string };
+  subject: string;
 }
 
 export interface CourseStructure {
@@ -60,6 +60,7 @@ export interface UpdateCourseRequest {
   description: string;
   difficulty_level: number;
   cover_image_url: string;
+  subject_id: string;
   tags: number[];
 }
 

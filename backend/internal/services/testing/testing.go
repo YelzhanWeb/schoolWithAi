@@ -45,5 +45,9 @@ func (s *TestService) CreateFullTest(ctx context.Context, test *entities.Test) e
 }
 
 func (s *TestService) GetTestByModule(ctx context.Context, moduleID string) (*entities.Test, error) {
-	return s.repo.GetTestByModuleID(ctx, moduleID)
+	test, err := s.repo.GetTestByModuleID(ctx, moduleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get test by module id: %w", err)
+	}
+	return test, nil
 }
