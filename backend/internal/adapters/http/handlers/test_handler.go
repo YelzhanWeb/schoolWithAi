@@ -145,7 +145,7 @@ func (h *TestHandler) GetTest(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "unauthorized"})
 		return
 	}
-	moduleID := c.Param("moduleId")
+	moduleID := c.Param("id")
 	test, err := h.service.GetTestByModule(c.Request.Context(), moduleID)
 	if err != nil {
 		log.Error().Err(err).Str("module_id", moduleID).Msg("failed to get test by moduleID")
