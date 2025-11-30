@@ -12,6 +12,10 @@ type TestRepository interface {
 	AddQuestion(ctx context.Context, q *entities.Question) error
 	AddAnswer(ctx context.Context, a *entities.Answer) error
 	GetTestByModuleID(ctx context.Context, moduleID string) (*entities.Test, error)
+
+	UpdateTest(ctx context.Context, test *entities.Test) error
+	DeleteTest(ctx context.Context, testID string) error
+	DeleteQuestionsByTestID(ctx context.Context, testID string) error
 }
 
 type TestService struct {
@@ -50,4 +54,33 @@ func (s *TestService) GetTestByModule(ctx context.Context, moduleID string) (*en
 		return nil, fmt.Errorf("failed to get test by module id: %w", err)
 	}
 	return test, nil
+}
+
+func (s *TestService) UpdateFullTest(ctx context.Context, test *entities.Test) error {
+	if err := s.repo.UpdateTest(ctx, test); err != nil {
+		return err
+	}
+
+	if err := s.repo.DeleteQuestionsByTestID(ctx, test.ID); err != nil {
+		return fmt.Errorf("failed to clear old questions: %w", err)
+	}
+
+	for _, q := range test.Questions {
+		q.TestID = test.ID
+		if err := s.repo.AddQuestion(ctx, &q); err != nil {
+			return fmt.Errorf("add question: %w", err)
+		}
+
+		for _, a := range q.Answers {
+			a.QuestionID = q.ID
+			if err := s.repo.AddAnswer(ctx, &a); err != nil {
+				return fmt.Errorf("add answer: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *TestService) DeleteTest(ctx context.Context, testID string) error {
+	return s.repo.DeleteTest(ctx, testID)
 }

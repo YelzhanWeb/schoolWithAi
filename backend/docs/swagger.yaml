@@ -33,6 +33,13 @@ definitions:
       title:
         type: string
     type: object
+  internal_adapters_http_handlers.CourseListResponse:
+    properties:
+      courses:
+        items:
+          $ref: '#/definitions/internal_adapters_http_handlers.CourseDetailResponse'
+        type: array
+    type: object
   internal_adapters_http_handlers.CreateAnswerRequest:
     properties:
       is_correct:
@@ -340,6 +347,22 @@ info:
   title: School Backend API
   version: "1.0"
 paths:
+  /teacher/courses:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.CourseListResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Get courses created by current teacher
+      tags:
+      - courses
   /v1/auth/change-password:
     post:
       consumes:
@@ -524,6 +547,36 @@ paths:
       tags:
       - courses
   /v1/courses/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete course by id
+      parameters:
+      - description: Course ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Delete course
+      tags:
+      - courses
     get:
       consumes:
       - application/json
@@ -680,6 +733,27 @@ paths:
       tags:
       - lessons
   /v1/lessons/{id}:
+    delete:
+      parameters:
+      - description: Lesson ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Delete lesson content
+      tags:
+      - lessons
     get:
       description: Get content, video url and attachments for a specific lesson
       parameters:
@@ -906,6 +980,60 @@ paths:
       security:
       - BearerAuth: []
       summary: Create a new test
+      tags:
+      - tests
+  /v1/tests/:id:
+    delete:
+      description: Delete a test (Teacher/Admin only)
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Delete old test
+      tags:
+      - tests
+    put:
+      consumes:
+      - application/json
+      description: Update a test (Teacher/Admin only)
+      parameters:
+      - description: Test data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handlers.CreateTestRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Update old test
       tags:
       - tests
   /v1/upload:

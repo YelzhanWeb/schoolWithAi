@@ -101,6 +101,8 @@ func (s *Server) setupRoutes() {
 			protected.POST("/courses/:id/publish", courseHandler.ChangePublishStatus)
 			protected.GET("/courses/:id/structure", courseHandler.GetStructure)
 			protected.GET("/courses/:id", courseHandler.GetCourse)
+			protected.GET("/teacher/courses", courseHandler.GetMyCourses)
+			protected.DELETE("/courses/:id", courseHandler.DeleteCourse)
 
 			protected.POST("/modules", courseHandler.CreateModule)
 			protected.PUT("/modules/:id", courseHandler.UpdateModule)
@@ -109,9 +111,12 @@ func (s *Server) setupRoutes() {
 			protected.POST("/lessons", courseHandler.CreateLesson)
 			protected.GET("/lessons/:id", courseHandler.GetLesson)
 			protected.PUT("/lessons/:id", courseHandler.UpdateLesson)
+			protected.DELETE("/lessons/:id", courseHandler.DeleteLesson)
 
 			protected.POST("/tests", testHandler.CreateTest)
 			protected.GET("/modules/:id/test", testHandler.GetTest)
+			protected.PUT("/tests/:id", testHandler.UpdateTest)
+			protected.DELETE("/tests/:id", testHandler.DeleteTest)
 		}
 	}
 }

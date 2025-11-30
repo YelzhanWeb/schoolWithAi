@@ -12,6 +12,8 @@ type CourseRepository interface {
 	UpdateCourse(ctx context.Context, course *entities.Course) error
 	GetByID(ctx context.Context, id string) (*entities.Course, error)
 	GetCourseStructure(ctx context.Context, courseID string) ([]entities.Module, error)
+	GetByAuthorID(ctx context.Context, authorID string) ([]entities.Course, error)
+	DeleteCourse(ctx context.Context, id string) error
 
 	AddModule(ctx context.Context, module *entities.Module) error
 	GetModuleByID(ctx context.Context, moduleID string) (*entities.Module, error) // <-- Добавили
@@ -39,6 +41,10 @@ func (s *CourseService) CreateCourse(ctx context.Context, course *entities.Cours
 		return fmt.Errorf("failed to create course: %w", err)
 	}
 	return nil
+}
+
+func (s *CourseService) GetCoursesByAuthor(ctx context.Context, authorID string) ([]entities.Course, error) {
+	return s.repo.GetByAuthorID(ctx, authorID)
 }
 
 func (s *CourseService) GetCourseByID(ctx context.Context, courseID string) (*entities.Course, error) {
@@ -81,6 +87,10 @@ func (s *CourseService) ChangePublishStatus(ctx context.Context, courseID string
 
 	course.IsPublished = isPublished
 	return s.repo.UpdateCourse(ctx, course)
+}
+
+func (s *CourseService) DeleteCourse(ctx context.Context, id string) error {
+	return s.repo.DeleteCourse(ctx, id)
 }
 
 func (s *CourseService) CreateModule(ctx context.Context, userID string, module *entities.Module) error {

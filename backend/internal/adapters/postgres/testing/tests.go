@@ -165,3 +165,33 @@ func (r *TestRepository) GetUserResults(ctx context.Context, userID string) ([]e
 	}
 	return results, nil
 }
+
+func (r *TestRepository) UpdateTest(ctx context.Context, test *entities.Test) error {
+	query := `UPDATE tests SET title = $2, passing_score = $3 WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, query, test.ID, test.Title, test.PassingScore)
+	if err != nil {
+		return fmt.Errorf("update test: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return entities.ErrNotFound
+	}
+	return nil
+}
+
+func (r *TestRepository) DeleteTest(ctx context.Context, testID string) error {
+	query := `DELETE FROM tests WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, query, testID)
+	if err != nil {
+		return fmt.Errorf("delete test: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return entities.ErrNotFound
+	}
+	return nil
+}
+
+func (r *TestRepository) DeleteQuestionsByTestID(ctx context.Context, testID string) error {
+	query := `DELETE FROM questions WHERE test_id = $1`
+	_, err := r.pool.Exec(ctx, query, testID)
+	return err
+}

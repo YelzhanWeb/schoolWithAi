@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"backend/internal/entities"
@@ -18,6 +17,8 @@ type CourseService interface {
 	GetCourseByID(ctx context.Context, courseID string) (*entities.Course, error)
 	UpdateCourse(ctx context.Context, courseID string, updates *entities.Course) error
 	ChangePublishStatus(ctx context.Context, courseID string, isPublished bool) error
+	GetCoursesByAuthor(ctx context.Context, authorID string) ([]entities.Course, error)
+	DeleteCourse(ctx context.Context, id string) error
 
 	CreateModule(ctx context.Context, userID string, module *entities.Module) error
 	UpdateModule(ctx context.Context, userID string, module *entities.Module) error
@@ -187,6 +188,48 @@ func (h *CourseHandler) GetCourse(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+type CourseListResponse struct {
+	Courses []CourseDetailResponse `json:"courses"`
+}
+
+// GetMyCourses godoc
+// @Summary Get courses created by current teacher
+// @Tags courses
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} CourseListResponse
+// @Failure 500
+// @Router /teacher/courses [get]
+func (h *CourseHandler) GetMyCourses(c *gin.Context) {
+	userID := c.GetString("user_id") // Берем из JWT токена
+
+	courses, err := h.courseService.GetCoursesByAuthor(c.Request.Context(), userID)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		log.Error().Err(err).Str("user_id", userID).Msg("failed to get my courses")
+		return
+	}
+
+	respCourses := make([]CourseDetailResponse, 0, len(courses))
+	for _, course := range courses {
+		// Тут можно теги не грузить для списка, чтобы быстрее было, или загрузить отдельно
+		respCourses = append(respCourses, CourseDetailResponse{
+			ID:              course.ID,
+			AuthorID:        course.AuthorID,
+			SubjectID:       course.SubjectID,
+			Title:           course.Title,
+			Description:     course.Description,
+			DifficultyLevel: course.DifficultyLevel,
+			CoverImageURL:   course.CoverImageURL,
+			IsPublished:     course.IsPublished,
+			// Tags: ... (можно оставить пустым для списка)
+		})
+	}
+
+	c.JSON(http.StatusOK, CourseListResponse{Courses: respCourses})
+	log.Info().Str("author_id", userID).Msg("author courses got successfully")
+}
+
 type UpdateCourseRequest struct {
 	Title           string `json:"title"`
 	Description     string `json:"description"`
@@ -301,6 +344,42 @@ func (h *CourseHandler) ChangePublishStatus(c *gin.Context) {
 		Str("user_id", userID).
 		Str("course_id", courseID).
 		Msg("course published successfully")
+}
+
+// DeleteCourse godoc
+// @Summary Delete course
+// @Description Delete course by id
+// @Tags courses
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Course ID"
+// @Success 200
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 500
+// @Router /v1/courses/{id} [delete]
+func (h *CourseHandler) DeleteCourse(c *gin.Context) {
+	courseID := c.Param("id")
+	userID := c.GetString("user_id")
+
+	_, err := h.courseService.GetUserCourse(c.Request.Context(), courseID, userID)
+	if err != nil {
+		c.JSON(http.StatusForbidden, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	if err := h.courseService.DeleteCourse(c.Request.Context(), courseID); err != nil {
+		c.Status(http.StatusInternalServerError)
+		log.Error().Err(err).Str("user_id", userID).Str("course_id", courseID).Msg("failed to delete course")
+		return
+	}
+
+	c.Status(http.StatusOK)
+	log.Info().
+		Str("user_id", userID).
+		Str("course_id", courseID).
+		Msg("course deleted successfully")
 }
 
 type CreateModuleRequest struct {
@@ -563,7 +642,6 @@ func (h *CourseHandler) UpdateLesson(c *gin.Context) {
 		log.Error().Err(err).Str("user_id", userID).Str("lesson_id", lessonID).Msg("failed to parse json request")
 		return
 	}
-	fmt.Println(req.FileAttachmentURL)
 	lesson := &entities.Lesson{
 		ID:                lessonID,
 		Title:             req.Title,
@@ -584,6 +662,28 @@ func (h *CourseHandler) UpdateLesson(c *gin.Context) {
 	}
 	c.Status(http.StatusOK)
 	log.Info().Str("user_id", userID).Str("lesson_id", lessonID).Msg("lesson updated successfully")
+}
+
+// DeleteLesson godoc
+// @Summary Delete lesson content
+// @Tags lessons
+// @Security BearerAuth
+// @Param id path string true "Lesson ID"
+// @Success 200
+// @Failure 400 {object} ErrorResponse
+// @Failure 500
+// @Router /v1/lessons/{id} [delete]
+func (h *CourseHandler) DeleteLesson(c *gin.Context) {
+	userID := c.GetString("user_id")
+	lessonID := c.Param("id")
+
+	if err := h.courseService.DeleteLesson(c.Request.Context(), userID, lessonID); err != nil {
+		c.Status(http.StatusInternalServerError)
+		log.Error().Err(err).Str("user_id", userID).Str("lesson_id", lessonID).Msg("failed to delete lesson")
+		return
+	}
+	c.Status(http.StatusOK)
+	log.Info().Str("user_id", userID).Str("lesson_id", lessonID).Msg("lesson deleted successfully")
 }
 
 type GetStructureResponse struct {
@@ -683,4 +783,6 @@ func (h *CourseHandler) GetTags(c *gin.Context) {
 	c.JSON(http.StatusOK, GetAllTagsResponse{
 		Tags: tagsResp,
 	})
+
+	log.Info().Msg("all tags got successfully")
 }

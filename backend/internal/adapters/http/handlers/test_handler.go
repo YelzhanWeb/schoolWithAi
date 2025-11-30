@@ -14,6 +14,8 @@ import (
 type TestService interface {
 	CreateFullTest(ctx context.Context, test *entities.Test) error
 	GetTestByModule(ctx context.Context, moduleID string) (*entities.Test, error)
+	UpdateFullTest(ctx context.Context, test *entities.Test) error
+	DeleteTest(ctx context.Context, testID string) error
 }
 
 type TestHandler struct {
@@ -184,4 +186,93 @@ func mapTestToResponse(test *entities.Test) TestResponse {
 	}
 
 	return resp
+}
+
+// UpdateTest godoc
+// @Summary Update old test
+// @Description Update a test (Teacher/Admin only)
+// @Tags tests
+// @Security BearerAuth
+// @Accept json
+// @Param input body CreateTestRequest true "Test data"
+// @Success 200
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 500
+// @Router /v1/tests/:id [put]
+func (h *TestHandler) UpdateTest(c *gin.Context) {
+	role, exists := c.Get("role")
+	if !exists {
+		log.Error().Msg("user unauthorized")
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "unauthorized"})
+		return
+	}
+
+	if role != "teacher" && role != "admin" {
+		log.Error().Msg("only teachers can create courses")
+		c.JSON(http.StatusForbidden, ErrorResponse{Message: "only teachers can create courses"})
+		return
+	}
+	testID := c.Param("id")
+	var req CreateTestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	test := entities.NewTest(req.ModuleID, req.Title, req.PassingScore)
+	test.ID = testID
+
+	for _, qReq := range req.Questions {
+		question := entities.NewQuestion(test.ID, qReq.Text, qReq.QuestionType)
+		for _, aReq := range qReq.Answers {
+			answer := entities.NewAnswer(question.ID, aReq.Text, aReq.IsCorrect)
+			question.Answers = append(question.Answers, *answer)
+		}
+		test.Questions = append(test.Questions, *question)
+	}
+
+	if err := h.service.UpdateFullTest(c.Request.Context(), test); err != nil {
+		c.Status(http.StatusInternalServerError)
+		log.Error().Err(err).Str("test_id", testID).Msg("failed to update test")
+		return
+	}
+
+	c.Status(http.StatusOK)
+	log.Info().Str("test_id", testID).Msg("test updated successfully")
+}
+
+// DeleteTest godoc
+// @Summary Delete old test
+// @Description Delete a test (Teacher/Admin only)
+// @Tags tests
+// @Security BearerAuth
+// @Success 200
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 500
+// @Router /v1/tests/:id [delete]
+func (h *TestHandler) DeleteTest(c *gin.Context) {
+	role, exists := c.Get("role")
+	if !exists {
+		log.Error().Msg("user unauthorized")
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "unauthorized"})
+		return
+	}
+
+	if role != "teacher" && role != "admin" {
+		log.Error().Msg("only teachers can create courses")
+		c.JSON(http.StatusForbidden, ErrorResponse{Message: "only teachers can create courses"})
+		return
+	}
+	testID := c.Param("id")
+
+	if err := h.service.DeleteTest(c.Request.Context(), testID); err != nil {
+		c.Status(http.StatusInternalServerError)
+		log.Error().Err(err).Str("test_id", testID).Msg("failed to delete test")
+		return
+	}
+	c.Status(http.StatusOK)
+	log.Info().Str("test_id", testID).Msg("test deleted successfully")
 }
