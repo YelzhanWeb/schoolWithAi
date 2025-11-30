@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "../ui/Button";
 import type { Lesson } from "../../types/course";
 import { Input } from "../ui/Input";
+import { MarkdownEditor } from "../ui/MarkdownEditor";
 
 interface LessonEditorProps {
   lesson: Lesson;
@@ -86,13 +87,17 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
         />
       </div>
 
-      {/* Текст контента */}
-      <textarea
-        className="w-full h-64 p-4 border rounded-lg font-mono text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-        value={lesson.content_text || ""}
-        onChange={(e) => onChange({ ...lesson, content_text: e.target.value })}
-        placeholder="# Markdown контент..."
-      />
+      {/* Текст контента - НОВЫЙ РЕДАКТОР */}
+      <div>
+        <label className="block text-sm font-medium mb-2 text-gray-700">
+          Содержание урока
+        </label>
+        <MarkdownEditor
+          value={lesson.content_text || ""}
+          onChange={(value) => onChange({ ...lesson, content_text: value })}
+          placeholder="Начните создавать контент урока..."
+        />
+      </div>
     </div>
   );
 };

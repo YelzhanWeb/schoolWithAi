@@ -25,7 +25,7 @@ export const CourseHeader: React.FC<CourseHeaderProps> = ({
     <header className="bg-white border-b px-6 py-3 flex justify-between items-center">
       <div className="flex items-center space-x-4">
         <button
-          onClick={() => navigate("/teacher/courses")}
+          onClick={() => navigate("/teacher/dashboard")}
           className="text-gray-500 hover:text-indigo-600"
         >
           <ChevronLeft />

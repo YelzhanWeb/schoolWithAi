@@ -4,7 +4,7 @@ import { coursesApi } from "../../api/courses";
 import type { Course } from "../../types/course";
 import { Button } from "../../components/ui/Button";
 
-const Dashboard = () => {
+const TeacherDashboard = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -104,4 +104,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default TeacherDashboard;

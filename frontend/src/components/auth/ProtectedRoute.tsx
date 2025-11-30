@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
   roles?: string[];
 }
 
-interface JwtPayload {
+export interface JwtPayload {
   role: string;
   user_id: string;
   exp: number;
@@ -30,9 +30,8 @@ export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
       return <Navigate to="/login" replace />;
     }
 
-    // Проверка роли
     if (roles && !roles.includes(decoded.role)) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/403" replace />;
     }
 
     return <>{children}</>;

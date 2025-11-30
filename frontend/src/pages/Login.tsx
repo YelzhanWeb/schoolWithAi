@@ -4,6 +4,8 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Link, useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";
+import { jwtDecode } from "jwt-decode";
+import type { JwtPayload } from "../components/auth/ProtectedRoute";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -28,12 +30,13 @@ export const LoginPage = () => {
     try {
       const response = await authApi.login(formData);
 
-      // Сохраняем токен, который пришел с бэкенда
       localStorage.setItem("token", response.token);
 
-      // Можно сделать запрос за профилем юзера, но пока просто редирект
-      // alert('Вход выполнен!');
-      navigate("/dashboard"); // Перекидываем на главную (создадим позже)
+      const decoded = jwtDecode<JwtPayload>(response.token);
+
+      if (decoded.role === "student") navigate("/student/dashboard");
+      else if (decoded.role === "teacher") navigate("/teacher/dashboard");
+      else if (decoded.role === "admin") navigate("/admin/dashboard");
     } catch (err) {
       const error = err as AxiosError<{ message: string }>;
       console.error(error);
