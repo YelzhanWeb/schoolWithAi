@@ -35,6 +35,10 @@ export const coursesApi = {
     await api.post(`/courses/${id}/publish`, { is_published: isPublished });
   },
 
+  delete: async (courseId: string): Promise<void> => {
+    await api.delete(`/courses/${courseId}`);
+  },
+
   getStructure: async (courseId: string): Promise<CourseStructure> => {
     const response = await api.get<CourseStructure>(
       `/courses/${courseId}/structure`

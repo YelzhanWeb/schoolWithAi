@@ -5,6 +5,7 @@ import { ChangePasswordPage } from "./pages/ChangePassword";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { CreateCoursePage } from "./pages/teacher/CreateCourse";
 import { EditCoursePage } from "./pages/teacher/EditCourse";
+import Dashboard from "./pages/teacher/Dashboard";
 
 function App() {
   return (
@@ -17,12 +18,7 @@ function App() {
         <Route path="/change-password" element={<ChangePasswordPage />} />
 
         {/* Заглушка для дашборда */}
-        <Route
-          path="/dashboard"
-          element={
-            <div className="p-10 text-2xl">Добро пожаловать в OqysAI! 🚀</div>
-          }
-        />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route
           path="/teacher/create-course"
           element={
