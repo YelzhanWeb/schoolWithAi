@@ -73,6 +73,15 @@ services:
 
       /usr/bin/mc cp /assets/default_avatar.jpg myminio/${MINIO_BUCKET_NAME}/avatars/default_avatar.jpg;
 
+      /usr/bin/mc cp /assets/bronze_league.png myminio/${MINIO_BUCKET_NAME}/leagues/bronze_league.png;
+      /usr/bin/mc cp /assets/silver_league.png myminio/${MINIO_BUCKET_NAME}/leagues/silver_league.png;
+      /usr/bin/mc cp /assets/gold_league.png myminio/${MINIO_BUCKET_NAME}/leagues/gold_league.png;
+      /usr/bin/mc cp /assets/sapphire_league.png myminio/${MINIO_BUCKET_NAME}/leagues/sapphire_league.png;
+      /usr/bin/mc cp /assets/ruby_league.png myminio/${MINIO_BUCKET_NAME}/leagues/ruby_league.png;
+      /usr/bin/mc cp /assets/diamond_league.png myminio/${MINIO_BUCKET_NAME}/leagues/diamond_league.png;
+      /usr/bin/mc cp /assets/emerald_league.png myminio/${MINIO_BUCKET_NAME}/leagues/emerald_league.png;
+      /usr/bin/mc cp /assets/amethyst_league.png myminio/${MINIO_BUCKET_NAME}/leagues/amethyst_league.png;
+  
       echo '🎉 Setup complete!';
       exit 0;
       "

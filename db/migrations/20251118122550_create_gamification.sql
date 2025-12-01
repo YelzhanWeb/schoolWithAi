@@ -10,31 +10,60 @@ CREATE TABLE leagues (
 );
 
 INSERT INTO
-    leagues (slug, name, order_index)
-VALUES ('bronze', 'Бронзовая лига', 1),
+    leagues (
+        slug,
+        name,
+        order_index,
+        icon_url
+    )
+VALUES (
+        'bronze',
+        'Бронзовая лига',
+        1,
+        "http://localhost:9000/school-assets/leagues/bronze_league.png"
+    ),
     (
         'silver',
         'Серебряная лига',
-        2
+        2,
+        "http://localhost:9000/school-assets/leagues/silver_league.png"
     ),
-    ('gold', 'Золотая лига', 3),
+    (
+        'gold',
+        'Золотая лига',
+        3,
+        "http://localhost:9000/school-assets/leagues/gold_league.png"
+    ),
     (
         'sapphire',
         'Сапфировая лига',
-        4
+        4,
+        "http://localhost:9000/school-assets/leagues/sapphire_league.png"
     ),
-    ('ruby', 'Рубиновая лига', 5),
+    (
+        'ruby',
+        'Рубиновая лига',
+        5,
+        "http://localhost:9000/school-assets/leagues/ruby_league.png"
+    ),
     (
         'emerald',
         'Изумрудная лига',
-        6
+        6,
+        "http://localhost:9000/school-assets/leagues/emerald_league.png"
     ),
     (
         'amethyst',
         'Аметистовая лига',
-        7
+        7,
+        "http://localhost:9000/school-assets/leagues/amethyst_league.png"
     ),
-    ('diamond', 'Алмазная лига', 8);
+    (
+        'diamond',
+        'Алмазная лига',
+        8,
+        "http://localhost:9000/school-assets/leagues/diamond_league.png"
+    );
 
 CREATE TABLE achievements (
     id TEXT PRIMARY KEY,

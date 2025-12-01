@@ -9,6 +9,8 @@ import (
 	"backend/internal/adapters/storage"
 	"backend/internal/services/auth"
 	"backend/internal/services/course"
+	"backend/internal/services/gamification"
+	"backend/internal/services/student"
 	"backend/internal/services/subject"
 	"backend/internal/services/testing"
 	"backend/pkg/jwt"
@@ -22,15 +24,17 @@ import (
 )
 
 type Server struct {
-	router         *gin.Engine
-	httpServer     *http.Server
-	authService    *auth.AuthService
-	courseService  *course.CourseService
-	subjectService *subject.SubjectService
-	uploadService  *storage.MinioStorage
-	testService    *testing.TestService
-	jwtManager     *jwt.JWTManager
-	mlServiceURL   string
+	router              *gin.Engine
+	httpServer          *http.Server
+	authService         *auth.AuthService
+	courseService       *course.CourseService
+	subjectService      *subject.SubjectService
+	uploadService       *storage.MinioStorage
+	testService         *testing.TestService
+	studentService      *student.StudentService
+	gamificationService *gamification.GamificationService
+	jwtManager          *jwt.JWTManager
+	mlServiceURL        string
 }
 
 func NewServer(
@@ -39,6 +43,8 @@ func NewServer(
 	subjectService *subject.SubjectService,
 	uploadService *storage.MinioStorage,
 	testService *testing.TestService,
+	studentService *student.StudentService,
+	gService *gamification.GamificationService,
 	jwtSecret string,
 	mlServiceURL string,
 ) *Server {
@@ -46,14 +52,16 @@ func NewServer(
 	router.Use(middleware.CORSMiddleware())
 
 	s := &Server{
-		router:         router,
-		authService:    authService,
-		courseService:  courseService,
-		subjectService: subjectService,
-		uploadService:  uploadService,
-		testService:    testService,
-		jwtManager:     jwt.NewJWTManager(jwtSecret),
-		mlServiceURL:   mlServiceURL,
+		router:              router,
+		authService:         authService,
+		courseService:       courseService,
+		subjectService:      subjectService,
+		uploadService:       uploadService,
+		testService:         testService,
+		studentService:      studentService,
+		gamificationService: gService,
+		jwtManager:          jwt.NewJWTManager(jwtSecret),
+		mlServiceURL:        mlServiceURL,
 	}
 
 	s.setupRoutes()
@@ -78,9 +86,12 @@ func (s *Server) setupRoutes() {
 		subjectHandler := handlers.NewSubjectHandler(s.subjectService)
 		uploadHandler := handlers.NewUploadHandler(s.uploadService)
 		testHandler := handlers.NewTestHandler(s.testService)
+		studentHandler := handlers.NewStudentHandler(s.studentService)
+		gameHandler := handlers.NewGamificationHandler(s.gamificationService)
 
 		api.GET("/subjects", subjectHandler.GetAllSubjects)
 		api.GET("/tags", courseHandler.GetTags)
+		api.GET("/gamification/leagues", gameHandler.GetAllLeagues)
 
 		auth := api.Group("/auth")
 		{
@@ -117,6 +128,9 @@ func (s *Server) setupRoutes() {
 			protected.GET("/modules/:id/test", testHandler.GetTest)
 			protected.PUT("/tests/:id", testHandler.UpdateTest)
 			protected.DELETE("/tests/:id", testHandler.DeleteTest)
+
+			protected.POST("/student/onboarding", studentHandler.CompleteOnboarding)
+			protected.GET("/student/dashboard", studentHandler.GetDashboard)
 		}
 	}
 }

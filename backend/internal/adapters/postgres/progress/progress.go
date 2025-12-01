@@ -11,11 +11,28 @@ import (
 )
 
 type ProgressRepository struct {
-	pool *pgxpool.Pool
+	connectionURL string
+	pool          *pgxpool.Pool
 }
 
-func NewProgressRepository(pool *pgxpool.Pool) *ProgressRepository {
-	return &ProgressRepository{pool: pool}
+func NewProgressRepository(connectionURL string) *ProgressRepository {
+	return &ProgressRepository{connectionURL: connectionURL}
+}
+
+func (r *ProgressRepository) Connect(ctx context.Context) error {
+	p, err := pgxpool.New(ctx, r.connectionURL)
+	if err != nil {
+		return fmt.Errorf("pgxpool new: %w", err)
+	}
+
+	r.pool = p
+	return nil
+}
+
+func (r *ProgressRepository) Close() {
+	if r.pool != nil {
+		r.pool.Close()
+	}
 }
 
 func (r *ProgressRepository) UpsertLessonProgress(ctx context.Context, lp *entities.LessonProgress) error {

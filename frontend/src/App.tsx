@@ -6,6 +6,8 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { CreateCoursePage } from "./pages/teacher/CreateCourse";
 import { EditCoursePage } from "./pages/teacher/EditCourse";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+import { OnboardingPage } from "./pages/student/Onboarding";
+import { StudentDashboard } from "./pages/student/StudentDashboard";
 
 function App() {
   return (
@@ -16,7 +18,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
 
-        {/* STUDENT
+        {/* STUDENT */}
         <Route
           path="/student/dashboard"
           element={
@@ -24,7 +26,7 @@ function App() {
               <StudentDashboard />
             </ProtectedRoute>
           }
-        /> */}
+        />
 
         {/* TEACHER */}
         <Route
@@ -60,6 +62,16 @@ function App() {
           element={
             <ProtectedRoute roles={["teacher", "admin"]}>
               <EditCoursePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Student pages */}
+        <Route
+          path="/student/onboarding"
+          element={
+            <ProtectedRoute roles={["student", "admin"]}>
+              <OnboardingPage />
             </ProtectedRoute>
           }
         />

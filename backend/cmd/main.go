@@ -15,10 +15,15 @@ import (
 	"backend/internal/services/auth"
 
 	"backend/internal/adapters/postgres/course"
+	"backend/internal/adapters/postgres/gamification"
+	"backend/internal/adapters/postgres/profile"
+	"backend/internal/adapters/postgres/progress"
 	"backend/internal/adapters/postgres/subject"
 	"backend/internal/adapters/postgres/testing"
 	"backend/internal/adapters/postgres/user"
 	courseService "backend/internal/services/course"
+	gamificationService "backend/internal/services/gamification"
+	"backend/internal/services/student"
 	subjectService "backend/internal/services/subject"
 	testService "backend/internal/services/testing"
 
@@ -79,6 +84,24 @@ func main() {
 	}
 	defer testRepo.Close()
 
+	profileRepo := profile.NewStudentProfileRepository(connectionURL)
+	if err := profileRepo.Connect(ctx); err != nil {
+		log.Fatalf("Failed profile repo: %v", err)
+	}
+	defer profileRepo.Close()
+
+	progressRepo := progress.NewProgressRepository(connectionURL)
+	if err := progressRepo.Connect(ctx); err != nil {
+		log.Fatalf("Failed profile repo: %v", err)
+	}
+	defer progressRepo.Close()
+
+	gamificationRepo := gamification.NewGamificationRepository(connectionURL)
+	if err := gamificationRepo.Connect(ctx); err != nil {
+		log.Fatalf("Failed gamification repo: %v", err)
+	}
+	defer gamificationRepo.Close()
+
 	log.Println("All repositories connected")
 
 	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
@@ -100,12 +123,23 @@ func main() {
 	subjService := subjectService.NewSubjectService(subjectRepo)
 	cService := courseService.NewCourseService(courseRepo)
 	testService := testService.NewTestService(testRepo)
+	studentService := student.NewStudentService(
+		profileRepo,
+		subjectRepo,
+		progressRepo,
+		courseRepo,
+		gamificationRepo,
+	)
+	gService := gamificationService.NewGamificationService(gamificationRepo)
+
 	httpServer := http.NewServer(
 		authService,
 		cService,
 		subjService,
 		minioStorage,
 		testService,
+		studentService,
+		gService,
 		cfg.JWTSecret,
 		mlServiceURL,
 	)
