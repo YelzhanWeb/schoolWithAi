@@ -19,6 +19,7 @@ type CourseService interface {
 	ChangePublishStatus(ctx context.Context, courseID string, isPublished bool) error
 	GetCoursesByAuthor(ctx context.Context, authorID string) ([]entities.Course, error)
 	DeleteCourse(ctx context.Context, id string) error
+	GetCatalog(ctx context.Context) ([]entities.Course, error)
 
 	CreateModule(ctx context.Context, userID string, module *entities.Module) error
 	UpdateModule(ctx context.Context, userID string, module *entities.Module) error
@@ -118,6 +119,37 @@ func (h *CourseHandler) CreateCourse(c *gin.Context) {
 		Str("title", course.Title).
 		Int("difficulty_level", course.DifficultyLevel).
 		Msg("course created successfully")
+}
+
+// GetCatalog godoc
+// @Summary Get all published courses
+// @Tags courses
+// @Produce json
+// @Success 200 {object} CourseListResponse
+// @Router /v1/catalog [get]
+func (h *CourseHandler) GetCatalog(c *gin.Context) {
+	courses, err := h.courseService.GetCatalog(c.Request.Context())
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		log.Error().Err(err).Msg("failed to get catalog")
+		return
+	}
+
+	respCourses := make([]CourseDetailResponse, 0, len(courses))
+	for _, course := range courses {
+		respCourses = append(respCourses, CourseDetailResponse{
+			ID:              course.ID,
+			AuthorID:        course.AuthorID,
+			SubjectID:       course.SubjectID,
+			Title:           course.Title,
+			Description:     course.Description,
+			DifficultyLevel: course.DifficultyLevel,
+			CoverImageURL:   course.CoverImageURL,
+			IsPublished:     course.IsPublished,
+		})
+	}
+
+	c.JSON(http.StatusOK, CourseListResponse{Courses: respCourses})
 }
 
 type TagResponse struct {

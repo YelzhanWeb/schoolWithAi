@@ -35,6 +35,39 @@ func (r *ProgressRepository) Close() {
 	}
 }
 
+func (r *ProgressRepository) GetCompletedLessonIDs(ctx context.Context, userID, courseID string) ([]string, error) {
+	query := `
+		SELECT lp.lesson_id
+		FROM lesson_progress lp
+		JOIN lessons l ON lp.lesson_id = l.id
+		JOIN modules m ON l.module_id = m.id
+		WHERE lp.user_id = $1 
+		  AND m.course_id = $2 
+		  AND lp.is_completed = true
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("get completed lessons: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+
+	if ids == nil {
+		ids = []string{}
+	}
+
+	return ids, nil
+}
+
 func (r *ProgressRepository) UpsertLessonProgress(ctx context.Context, lp *entities.LessonProgress) error {
 	query := `
 		INSERT INTO lesson_progress (user_id, lesson_id, status, is_completed, last_accessed_at)

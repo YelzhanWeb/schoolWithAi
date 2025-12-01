@@ -27,6 +27,17 @@ export interface CreateTestRequest {
   questions: Question[];
 }
 
+export interface SubmitTestResponse {
+  is_passed: boolean;
+  score: number;
+  xp_gained: number;
+}
+
+export interface StudentAnswer {
+  question_id: string;
+  answer_id: string;
+}
+
 export const testsApi = {
   getByModuleId: async (moduleId: string): Promise<Test> => {
     const response = await api.get<Test>(`/modules/${moduleId}/test`);
@@ -44,5 +55,27 @@ export const testsApi = {
 
   delete: async (id: string) => {
     await api.delete(`/tests/${id}`);
+  },
+
+  completeLesson: async (lessonId: string): Promise<{ xp_gained: number }> => {
+    const response = await api.post<{ xp_gained: number }>(
+      `/student/lessons/${lessonId}/complete`
+    );
+    return response.data;
+  },
+
+  // Метод для отправки теста
+  submitTest: async (
+    testId: string,
+    answers: StudentAnswer[]
+  ): Promise<SubmitTestResponse> => {
+    const response = await api.post<SubmitTestResponse>(
+      "/student/tests/submit",
+      {
+        test_id: testId,
+        answers: answers,
+      }
+    );
+    return response.data;
   },
 };

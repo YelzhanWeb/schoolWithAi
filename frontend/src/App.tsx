@@ -8,6 +8,10 @@ import { EditCoursePage } from "./pages/teacher/EditCourse";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import { OnboardingPage } from "./pages/student/Onboarding";
 import { StudentDashboard } from "./pages/student/StudentDashboard";
+import { CatalogPage } from "./pages/student/Catalog";
+import { CourseOverview } from "./pages/student/CourseOverview";
+import { StudentLayout } from "./pages/student/StudentLayout";
+import { LessonPlayer } from "./pages/student/LessonPlayer";
 
 function App() {
   return (
@@ -17,16 +21,6 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
-
-        {/* STUDENT */}
-        <Route
-          path="/student/dashboard"
-          element={
-            <ProtectedRoute roles={["student"]}>
-              <StudentDashboard />
-            </ProtectedRoute>
-          }
-        />
 
         {/* TEACHER */}
         <Route
@@ -75,6 +69,43 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          element={
+            <ProtectedRoute roles={["student", "admin"]}>
+              <StudentLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route
+            path="/student/catalog"
+            element={
+              <ProtectedRoute roles={["student", "admin"]}>
+                <CatalogPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/courses/:id"
+            element={
+              <ProtectedRoute roles={["student", "admin"]}>
+                <CourseOverview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/dashboard"
+            element={
+              <ProtectedRoute roles={["student"]}>
+                <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/courses/:courseId/lessons/:lessonId"
+            element={<LessonPlayer />}
+          />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

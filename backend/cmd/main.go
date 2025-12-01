@@ -129,6 +129,7 @@ func main() {
 		progressRepo,
 		courseRepo,
 		gamificationRepo,
+		testRepo,
 	)
 	gService := gamificationService.NewGamificationService(gamificationRepo)
 

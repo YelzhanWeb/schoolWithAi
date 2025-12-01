@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"backend/internal/entities"
+	"backend/internal/services/student"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -275,4 +276,39 @@ func (h *TestHandler) DeleteTest(c *gin.Context) {
 	}
 	c.Status(http.StatusOK)
 	log.Info().Str("test_id", testID).Msg("test deleted successfully")
+}
+
+type SubmitTestRequest struct {
+	TestID  string `json:"test_id" binding:"required"`
+	Answers []struct {
+		QuestionID string `json:"question_id"`
+		AnswerID   string `json:"answer_id"`
+	} `json:"answers"`
+}
+
+func (h *StudentHandler) SubmitTest(c *gin.Context) {
+	userID := c.GetString("user_id")
+	var req SubmitTestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	// Мапим в структуру сервиса
+	srvAnswers := make([]student.StudentAnswer, len(req.Answers))
+	for i, a := range req.Answers {
+		srvAnswers[i] = student.StudentAnswer{QuestionID: a.QuestionID, AnswerID: a.AnswerID}
+	}
+
+	res, xp, err := h.service.SubmitTest(c.Request.Context(), userID, req.TestID, srvAnswers)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"is_passed": res.IsPassed,
+		"score":     res.Score,
+		"xp_gained": xp,
+	})
 }

@@ -25,9 +25,13 @@ export const StudentDashboard = () => {
 
         setData(dashboardData);
         setLeagues(leaguesList);
-      } catch (error: any) {
-        // Если профиля нет (404), редиректим на онбординг
-        if (error.response && error.response.status === 404) {
+      } catch (error: unknown) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          (error as { response?: { status?: number } }).response?.status === 404
+        ) {
           navigate("/student/onboarding");
         } else {
           console.error("Ошибка загрузки дашборда", error);

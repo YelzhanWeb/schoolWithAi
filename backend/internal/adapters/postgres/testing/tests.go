@@ -195,3 +195,73 @@ func (r *TestRepository) DeleteQuestionsByTestID(ctx context.Context, testID str
 	_, err := r.pool.Exec(ctx, query, testID)
 	return err
 }
+
+func (r *TestRepository) GetTestFullByID(ctx context.Context, testID string) (*entities.Test, error) {
+	// 1. Получаем сам тест
+	var tDTO testDTO
+	queryTest := `SELECT id, module_id, title, passing_score FROM tests WHERE id = $1`
+	err := r.pool.QueryRow(ctx, queryTest, testID).Scan(&tDTO.ID, &tDTO.ModuleID, &tDTO.Title, &tDTO.PassingScore)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, entities.ErrNotFound
+		}
+		return nil, fmt.Errorf("get test by id: %w", err)
+	}
+
+	test := tDTO.toEntity()
+
+	// 2. Получаем вопросы
+	queryQuestions := `SELECT id, test_id, text, question_type FROM questions WHERE test_id = $1`
+	rowsQ, err := r.pool.Query(ctx, queryQuestions, test.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get questions: %w", err)
+	}
+	defer rowsQ.Close()
+
+	questionsMap := make(map[string]*entities.Question)
+	var questionIDs []string
+
+	for rowsQ.Next() {
+		var qDTO questionDTO
+		if err := rowsQ.Scan(&qDTO.ID, &qDTO.TestID, &qDTO.Text, &qDTO.QuestionType); err != nil {
+			return nil, err
+		}
+		q := qDTO.toEntity()
+		questionsMap[q.ID] = &q
+		questionIDs = append(questionIDs, q.ID)
+	}
+
+	// Если вопросов нет, возвращаем тест как есть
+	if len(questionIDs) == 0 {
+		return test, nil
+	}
+
+	// 3. Получаем ответы для всех вопросов разом
+	queryAnswers := `SELECT id, question_id, text, is_correct FROM answers WHERE question_id = ANY($1)`
+	rowsA, err := r.pool.Query(ctx, queryAnswers, questionIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get answers: %w", err)
+	}
+	defer rowsA.Close()
+
+	for rowsA.Next() {
+		var aDTO answerDTO
+		if err := rowsA.Scan(&aDTO.ID, &aDTO.QuestionID, &aDTO.Text, &aDTO.IsCorrect); err != nil {
+			return nil, err
+		}
+		a := aDTO.toEntity()
+
+		if q, ok := questionsMap[a.QuestionID]; ok {
+			q.Answers = append(q.Answers, a)
+		}
+	}
+
+	// Собираем вопросы обратно в слайс
+	for _, id := range questionIDs {
+		if q, ok := questionsMap[id]; ok {
+			test.Questions = append(test.Questions, *q)
+		}
+	}
+
+	return test, nil
+}

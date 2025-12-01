@@ -38,4 +38,11 @@ export const studentApi = {
     const response = await api.get<DashboardData>("/student/dashboard");
     return response.data;
   },
+
+  getCourseProgress: async (courseId: string): Promise<string[]> => {
+    const response = await api.get<{ completed_lessons: string[] }>(
+      `/student/courses/${courseId}/progress`
+    );
+    return response.data.completed_lessons || [];
+  },
 };

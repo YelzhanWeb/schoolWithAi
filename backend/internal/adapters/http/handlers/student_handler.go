@@ -17,6 +17,30 @@ func NewStudentHandler(service *student.StudentService) *StudentHandler {
 	return &StudentHandler{service: service}
 }
 
+// CompleteLesson godoc
+// @Summary Mark lesson as completed
+// @Tags student
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Lesson ID"
+// @Success 200 {object} map[string]any
+// @Router /v1/student/lessons/{id}/complete [post]
+func (h *StudentHandler) CompleteLesson(c *gin.Context) {
+	userID := c.GetString("user_id")
+	lessonID := c.Param("id")
+
+	_, xp, err := h.service.CompleteLesson(c.Request.Context(), userID, lessonID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "failed to complete lesson"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "completed",
+		"xp_gained": xp,
+	})
+}
+
 type OnboardingRequest struct {
 	Grade      int      `json:"grade" binding:"required,min=1,max=11"`
 	SubjectIDs []string `json:"subject_ids" binding:"required"`
@@ -45,6 +69,27 @@ func (h *StudentHandler) CompleteOnboarding(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+// GetCourseProgress godoc
+// @Summary Get completed lesson IDs for a course
+// @Tags student
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Course ID"
+// @Success 200 {object} map[string][]string
+// @Router /v1/student/courses/{id}/progress [get]
+func (h *StudentHandler) GetCourseProgress(c *gin.Context) {
+	userID := c.GetString("user_id")
+	courseID := c.Param("id")
+
+	ids, err := h.service.GetCourseProgress(c.Request.Context(), userID, courseID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "failed to get progress"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"completed_lessons": ids})
 }
 
 type DashboardResponse struct {

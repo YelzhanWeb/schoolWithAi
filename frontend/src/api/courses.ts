@@ -22,6 +22,10 @@ export const coursesApi = {
     return response.data;
   },
 
+  getCatalog: async (): Promise<Course[]> => {
+    const response = await api.get<{ courses: Course[] }>("/catalog");
+    return response.data.courses || [];
+  },
   create: async (data: CreateCourseRequest): Promise<CreateCourseResponse> => {
     const response = await api.post<CreateCourseResponse>("/courses", data);
     return response.data;

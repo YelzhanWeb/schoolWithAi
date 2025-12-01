@@ -97,6 +97,36 @@ func (r *CourseRepository) GetByAuthorID(ctx context.Context, authorID string) (
 	return courses, nil
 }
 
+func (r *CourseRepository) GetCatalog(ctx context.Context) ([]entities.Course, error) {
+	// Выбираем только опубликованные курсы
+	query := `
+		SELECT id, author_id, subject_id, title, description, difficulty_level, cover_image_url, is_published, created_at 
+		FROM courses 
+		WHERE is_published = true 
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get catalog: %w", err)
+	}
+	defer rows.Close()
+
+	var courses []entities.Course
+	for rows.Next() {
+		var d courseDTO
+		if err := rows.Scan(
+			&d.ID, &d.AuthorID, &d.SubjectID, &d.Title, &d.Description,
+			&d.DifficultyLevel, &d.CoverImageURL, &d.IsPublished, &d.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		courses = append(courses, *d.toEntity())
+	}
+
+	return courses, nil
+}
+
 func (r *CourseRepository) GetByID(ctx context.Context, id string) (*entities.Course, error) {
 	query := `SELECT id, author_id, subject_id, title, description, difficulty_level, cover_image_url, is_published, created_at FROM courses WHERE id = $1`
 
@@ -137,11 +167,11 @@ func (r *CourseRepository) UpdateCourse(ctx context.Context, course *entities.Co
             difficulty_level = $4, 
             cover_image_url = $5, 
             is_published = $6,
-			subject_id = $7,
+			subject_id = $7
         WHERE id = $1
     `
 
-	tag, err := r.pool.Exec(
+	tag, err := tx.Exec(
 		ctx,
 		query,
 		d.ID,
@@ -164,7 +194,7 @@ func (r *CourseRepository) UpdateCourse(ctx context.Context, course *entities.Co
 		return err
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
 
 func (r *CourseRepository) DeleteCourse(ctx context.Context, id string) error {
