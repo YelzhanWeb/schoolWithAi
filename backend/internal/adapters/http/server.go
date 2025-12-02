@@ -88,6 +88,7 @@ func (s *Server) setupRoutes() {
 		testHandler := handlers.NewTestHandler(s.testService)
 		studentHandler := handlers.NewStudentHandler(s.studentService)
 		gameHandler := handlers.NewGamificationHandler(s.gamificationService)
+		leaderboarHandler := handlers.NewLeaderboardHandler(s.studentService)
 
 		api.GET("/subjects", subjectHandler.GetAllSubjects)
 		api.GET("/tags", courseHandler.GetTags)
@@ -135,6 +136,9 @@ func (s *Server) setupRoutes() {
 			protected.GET("/student/courses/:id/progress", studentHandler.GetCourseProgress)
 			protected.POST("/student/lessons/:id/complete", studentHandler.CompleteLesson)
 			protected.POST("/student/tests/submit", studentHandler.SubmitTest)
+
+			protected.GET("/leaderboard/weekly", leaderboarHandler.GetWeeklyLeaderboard)
+			protected.GET("/v1/leaderboard/global", leaderboarHandler.GetGlobalLeaderboard)
 		}
 	}
 }

@@ -1,4 +1,3 @@
-// backend/internal/services/scheduler/weekly_reset.go
 package scheduler
 
 import (
@@ -15,6 +14,7 @@ type ProfileRepository interface {
 	GetLeaderboard(ctx context.Context, limit int) ([]*entities.StudentProfile, error)
 	GetLeagueLeaderboard(ctx context.Context, leagueID int, limit int) ([]*entities.StudentProfile, error)
 	Update(ctx context.Context, profile *entities.StudentProfile) error
+	ResetAllWeeklyXP(ctx context.Context) error
 }
 
 type GamificationRepository interface {
@@ -36,17 +36,21 @@ func NewWeeklyResetService(pRepo ProfileRepository, gRepo GamificationRepository
 
 // Start - запускает еженедельный сброс (запускать в main.go как горутину)
 func (s *WeeklyResetService) Start(ctx context.Context) {
-	ticker := time.NewTicker(24 * time.Hour)
+	ticker := time.NewTicker(1 * time.Hour) // Проверяем каждый час
 	defer ticker.Stop()
+
+	log.Println("Weekly reset scheduler started")
 
 	for {
 		select {
 		case <-ctx.Done():
+			log.Println("Weekly reset scheduler stopped")
 			return
 		case <-ticker.C:
 			now := time.Now().UTC()
-			// Проверяем, наступил ли понедельник 00:00
+			// Проверяем, наступил ли понедельник 00:00 (проверяем диапазон часа)
 			if now.Weekday() == time.Monday && now.Hour() == 0 {
+				log.Println("Starting weekly reset...")
 				s.performWeeklyReset(context.Background())
 			}
 		}
@@ -55,8 +59,6 @@ func (s *WeeklyResetService) Start(ctx context.Context) {
 
 // performWeeklyReset - основная логика сброса
 func (s *WeeklyResetService) performWeeklyReset(ctx context.Context) {
-	log.Println("Starting weekly reset...")
-
 	now := time.Now().UTC()
 	periodEnd := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	periodStart := periodEnd.AddDate(0, 0, -7)
@@ -75,6 +77,11 @@ func (s *WeeklyResetService) performWeeklyReset(ctx context.Context) {
 			continue
 		}
 
+		if len(profiles) == 0 {
+			log.Printf("No profiles in league %d", league.ID)
+			continue
+		}
+
 		// Сохраняем снимки рейтинга
 		for rank, profile := range profiles {
 			history := &entities.LeaderboardHistory{
@@ -87,17 +94,21 @@ func (s *WeeklyResetService) performWeeklyReset(ctx context.Context) {
 				TotalXP:     profile.WeeklyXP,
 				CreatedAt:   now,
 			}
-			s.gamificationRepo.SaveHistorySnapshot(ctx, history)
+			if err := s.gamificationRepo.SaveHistorySnapshot(ctx, history); err != nil {
+				log.Printf("Failed to save history snapshot: %v", err)
+			}
 		}
 
 		// Продвижение/понижение по лигам
 		s.updateLeagues(ctx, profiles, league.ID, len(leagues))
 	}
 
-	// Сбрасываем weekly_xp у всех
-	s.resetWeeklyXP(ctx)
+	// Сбрасываем weekly_xp у всех одним запросом
+	if err := s.profileRepo.ResetAllWeeklyXP(ctx); err != nil {
+		log.Printf("Failed to reset weekly XP: %v", err)
+	}
 
-	log.Println("Weekly reset completed!")
+	log.Println("Weekly reset completed successfully!")
 }
 
 // updateLeagues - обновление лиг на основе рейтинга
@@ -119,29 +130,24 @@ func (s *WeeklyResetService) updateLeagues(ctx context.Context, profiles []*enti
 	}
 
 	for i, profile := range profiles {
+		shouldUpdate := false
+
 		if i < promoteCount && currentLeagueID < totalLeagues {
 			// Продвижение
 			profile.CurrentLeagueID++
-			s.profileRepo.Update(ctx, profile)
+			shouldUpdate = true
+			log.Printf("Promoting user %s to league %d", profile.UserID, profile.CurrentLeagueID)
 		} else if i >= len(profiles)-demoteCount && currentLeagueID > 1 {
 			// Понижение
 			profile.CurrentLeagueID--
-			s.profileRepo.Update(ctx, profile)
+			shouldUpdate = true
+			log.Printf("Demoting user %s to league %d", profile.UserID, profile.CurrentLeagueID)
 		}
-	}
-}
 
-// resetWeeklyXP - сбрасываем weekly_xp у всех студентов
-func (s *WeeklyResetService) resetWeeklyXP(ctx context.Context) {
-	// Получаем всех (можно оптимизировать через батч-запрос в БД)
-	profiles, err := s.profileRepo.GetLeaderboard(ctx, 10000)
-	if err != nil {
-		log.Printf("Failed to get all profiles: %v", err)
-		return
-	}
-
-	for _, profile := range profiles {
-		profile.WeeklyXP = 0
-		s.profileRepo.Update(ctx, profile)
+		if shouldUpdate {
+			if err := s.profileRepo.Update(ctx, profile); err != nil {
+				log.Printf("Failed to update profile for user %s: %v", profile.UserID, err)
+			}
+		}
 	}
 }

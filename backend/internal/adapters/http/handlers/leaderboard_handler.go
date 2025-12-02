@@ -58,8 +58,23 @@ func (h *LeaderboardHandler) GetWeeklyLeaderboard(c *gin.Context) {
 		return
 	}
 
+	leaderboardResponse := make([]LeaderboardEntry, 0)
+
+	for _, lboard := range leaderboard {
+		leaderboardResponse = append(leaderboardResponse, LeaderboardEntry{
+			Rank:      lboard.Rank,
+			UserID:    lboard.UserID,
+			FirstName: lboard.FirstName,
+			LastName:  lboard.LastName,
+			AvatarURL: lboard.AvatarURL,
+			XP:        lboard.XP,
+			Level:     lboard.Level,
+			LeagueID:  lboard.LeagueID,
+		})
+	}
+
 	c.JSON(http.StatusOK, LeaderboardResponse{
-		Leaderboard: leaderboard,
+		Leaderboard: leaderboardResponse,
 		UserRank:    userRank,
 	})
 }
@@ -88,8 +103,23 @@ func (h *LeaderboardHandler) GetGlobalLeaderboard(c *gin.Context) {
 		return
 	}
 
+	leaderboardResponse := make([]LeaderboardEntry, 0)
+
+	for _, lboard := range leaderboard {
+		leaderboardResponse = append(leaderboardResponse, LeaderboardEntry{
+			Rank:      lboard.Rank,
+			UserID:    lboard.UserID,
+			FirstName: lboard.FirstName,
+			LastName:  lboard.LastName,
+			AvatarURL: lboard.AvatarURL,
+			XP:        lboard.XP,
+			Level:     lboard.Level,
+			LeagueID:  lboard.LeagueID,
+		})
+	}
+
 	c.JSON(http.StatusOK, LeaderboardResponse{
-		Leaderboard: leaderboard,
+		Leaderboard: leaderboardResponse,
 		UserRank:    userRank,
 	})
 }

@@ -175,13 +175,13 @@ func (r *StudentProfileRepository) GetLeaderboard(ctx context.Context, limit int
 		       current_league_id, weekly_xp, current_streak, max_streak, last_activity_date,
 		       created_at, updated_at
 		FROM student_profiles
-		ORDER BY weekly_xp DESC
+		ORDER BY xp DESC
 		LIMIT $1
 	`
 
 	rows, err := r.pool.Query(ctx, query, limit)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get leaderboard: %w", err)
+		return nil, fmt.Errorf("failed to get global leaderboard: %w", err)
 	}
 	defer rows.Close()
 
@@ -233,6 +233,79 @@ func (r *StudentProfileRepository) GetLeagueLeaderboard(
 	}
 
 	return profiles, nil
+}
+
+// GetUserGlobalRank возвращает позицию пользователя в глобальном рейтинге
+func (r *StudentProfileRepository) GetUserGlobalRank(ctx context.Context, userID string) (int, error) {
+	if r.pool == nil {
+		return 0, fmt.Errorf("not connected to pool")
+	}
+
+	query := `
+		WITH ranked_profiles AS (
+			SELECT user_id, ROW_NUMBER() OVER (ORDER BY xp DESC) as rank
+			FROM student_profiles
+		)
+		SELECT rank FROM ranked_profiles WHERE user_id = $1
+	`
+
+	var rank int
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&rank)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, entities.ErrNotFound
+		}
+		return 0, fmt.Errorf("failed to get user global rank: %w", err)
+	}
+
+	return rank, nil
+}
+
+// GetUserLeagueRank возвращает позицию пользователя в его лиге
+func (r *StudentProfileRepository) GetUserLeagueRank(ctx context.Context, userID string) (int, error) {
+	if r.pool == nil {
+		return 0, fmt.Errorf("not connected to pool")
+	}
+
+	query := `
+		WITH user_league AS (
+			SELECT current_league_id FROM student_profiles WHERE user_id = $1
+		),
+		ranked_profiles AS (
+			SELECT sp.user_id, ROW_NUMBER() OVER (ORDER BY sp.weekly_xp DESC) as rank
+			FROM student_profiles sp
+			CROSS JOIN user_league ul
+			WHERE sp.current_league_id = ul.current_league_id
+		)
+		SELECT rank FROM ranked_profiles WHERE user_id = $1
+	`
+
+	var rank int
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&rank)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, entities.ErrNotFound
+		}
+		return 0, fmt.Errorf("failed to get user league rank: %w", err)
+	}
+
+	return rank, nil
+}
+
+// ResetAllWeeklyXP сбрасывает weekly_xp у всех профилей (для еженедельного сброса)
+func (r *StudentProfileRepository) ResetAllWeeklyXP(ctx context.Context) error {
+	if r.pool == nil {
+		return fmt.Errorf("not connected to pool")
+	}
+
+	query := `UPDATE student_profiles SET weekly_xp = 0, updated_at = NOW()`
+
+	_, err := r.pool.Exec(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to reset weekly XP: %w", err)
+	}
+
+	return nil
 }
 
 type rowScanner interface {

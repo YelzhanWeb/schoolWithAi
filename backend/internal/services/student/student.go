@@ -15,6 +15,10 @@ type ProfileRepository interface {
 	GetByUserID(ctx context.Context, userID string) (*entities.StudentProfile, error)
 	Update(ctx context.Context, profile *entities.StudentProfile) error
 	Exists(ctx context.Context, userID string) (bool, error)
+	GetLeaderboard(ctx context.Context, limit int) ([]*entities.StudentProfile, error)
+	GetLeagueLeaderboard(ctx context.Context, leagueID int, limit int) ([]*entities.StudentProfile, error)
+	GetUserGlobalRank(ctx context.Context, userID string) (int, error)
+	GetUserLeagueRank(ctx context.Context, userID string) (int, error)
 }
 
 type SubjectRepository interface {
@@ -377,25 +381,23 @@ type LeaderboardEntry struct {
 }
 
 func (s *StudentService) GetWeeklyLeaderboard(ctx context.Context, userID string, limit int) ([]LeaderboardEntry, *int, error) {
-	// 1. Получаем лигу пользователя
+	// Получаем лигу пользователя
 	profile, err := s.profileRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get user profile: %w", err)
 	}
 
-	// 2. Получаем топ игроков в этой лиге
+	// Получаем топ игроков в этой лиге по weekly_xp
 	profiles, err := s.profileRepo.GetLeagueLeaderboard(ctx, profile.CurrentLeagueID, limit)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get league leaderboard: %w", err)
 	}
 
-	// 3. Формируем список с рангами
+	// Формируем список с рангами
 	entries := make([]LeaderboardEntry, len(profiles))
 	userRank := -1
 
 	for i, p := range profiles {
-		// Здесь нужно получить данные пользователя (имя, аватар)
-		// Это требует UserRepository - добавим позже или используем кэш
 		entries[i] = LeaderboardEntry{
 			Rank:     i + 1,
 			UserID:   p.UserID,
@@ -409,9 +411,15 @@ func (s *StudentService) GetWeeklyLeaderboard(ctx context.Context, userID string
 		}
 	}
 
+	// Если пользователь не в топе, получаем его ранг отдельно
 	var userRankPtr *int
 	if userRank > 0 {
 		userRankPtr = &userRank
+	} else {
+		rank, err := s.profileRepo.GetUserLeagueRank(ctx, userID)
+		if err == nil {
+			userRankPtr = &rank
+		}
 	}
 
 	return entries, userRankPtr, nil
@@ -421,7 +429,7 @@ func (s *StudentService) GetGlobalLeaderboard(ctx context.Context, userID string
 	// Получаем топ по общему XP
 	profiles, err := s.profileRepo.GetLeaderboard(ctx, limit)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get global leaderboard: %w", err)
 	}
 
 	entries := make([]LeaderboardEntry, len(profiles))
@@ -440,13 +448,15 @@ func (s *StudentService) GetGlobalLeaderboard(ctx context.Context, userID string
 		}
 	}
 
-	// Если пользователь не в топе, найдем его ранг отдельно
+	// Если пользователь не в топе, получаем его ранг отдельно
 	var userRankPtr *int
 	if userRank > 0 {
 		userRankPtr = &userRank
 	} else {
-		// TODO: добавить метод GetUserGlobalRank в ProfileRepository
-		// для подсчета позиции пользователя
+		rank, err := s.profileRepo.GetUserGlobalRank(ctx, userID)
+		if err == nil {
+			userRankPtr = &rank
+		}
 	}
 
 	return entries, userRankPtr, nil
