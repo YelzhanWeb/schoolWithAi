@@ -26,10 +26,7 @@ type ProgressRepository interface {
 	GetUserActiveCourses(ctx context.Context, userID string, limit int) ([]entities.CourseProgress, error)
 	GetCompletedLessonIDs(ctx context.Context, userID, courseID string) ([]string, error)
 	UpsertLessonProgress(ctx context.Context, lp *entities.LessonProgress) error
-	GetLessonProgress(
-		ctx context.Context,
-		userID, lessonID string,
-	) (*entities.LessonProgress, error)
+	GetLessonProgress(ctx context.Context, userID, lessonID string) (*entities.LessonProgress, error)
 	CountCompletedLessonsInCourse(ctx context.Context, userID, courseID string) (int, error)
 	UpsertCourseProgress(ctx context.Context, cp *entities.CourseProgress) error
 }
@@ -49,6 +46,7 @@ type TestRepository interface {
 	GetTestByModuleID(ctx context.Context, moduleID string) (*entities.Test, error)
 	SaveResult(ctx context.Context, res *entities.TestResult) error
 	GetTestFullByID(ctx context.Context, testID string) (*entities.Test, error)
+	GetUserResults(ctx context.Context, userID string) ([]entities.TestResult, error)
 }
 
 type StudentService struct {
@@ -80,27 +78,27 @@ func NewStudentService(
 
 type StudentAnswer struct {
 	QuestionID string
-	AnswerID   string // Если single choice
-	// AnswerIDs []string // Если multiple choice (пока пропустим для простоты)
+	AnswerID   string
 }
 
 func (s *StudentService) SubmitTest(ctx context.Context, userID, testID string, answers []StudentAnswer) (*entities.TestResult, int, error) {
-	// 1. Нам нужно получить "Правильные ответы" из БД.
-	// В текущем TestRepo (testing.go) нет метода GetTestByID.
-	// ДАВАЙ ИСПОЛЬЗОВАТЬ GetTestByModuleID, но нам нужно знать moduleID.
-	// Это неудобно. Давай добавим GetTestByIDWithAnswers в TestRepo.
-
-	// ПРЕДПОЛОЖИМ, что мы его добавили (см. шаг ниже)
 	test, err := s.testRepo.GetTestFullByID(ctx, testID)
 	if err != nil {
 		return nil, 0, err
 	}
 
+	results, err := s.testRepo.GetUserResults(ctx, userID)
+	if err == nil {
+		for _, r := range results {
+			if r.TestID == testID && r.IsPassed {
+				return &r, 0, nil
+			}
+		}
+	}
+
 	correctCount := 0
 	totalQuestions := len(test.Questions)
 
-	// 2. Проверяем ответы
-	// Создаем map правильных ответов для быстрого поиска: QuestionID -> CorrectAnswerID
 	correctMap := make(map[string]string)
 	for _, q := range test.Questions {
 		for _, a := range q.Answers {
@@ -119,16 +117,14 @@ func (s *StudentService) SubmitTest(ctx context.Context, userID, testID string, 
 		}
 	}
 
-	// 3. Считаем результат
 	score := 0
 	if totalQuestions > 0 {
 		score = (correctCount * 100) / totalQuestions
 	}
 	isPassed := score >= test.PassingScore
 
-	// 4. Сохраняем результат
 	result := &entities.TestResult{
-		ID:          uuid.NewString(), // Не забудь import "github.com/google/uuid"
+		ID:          uuid.NewString(),
 		UserID:      userID,
 		TestID:      testID,
 		Score:       score,
@@ -139,39 +135,31 @@ func (s *StudentService) SubmitTest(ctx context.Context, userID, testID string, 
 		return nil, 0, err
 	}
 
-	// 5. Начисляем XP если сдал (например, 50 XP за тест)
 	xp := 0
 	if isPassed {
-		// Проверяем, сдавал ли он раньше этот тест (чтобы не фармить XP)
-		// (Это сложнее, пока пропустим, дадим XP за каждую успешную сдачу для радости)
 		xp = 50
 		profile, _ := s.profileRepo.GetByUserID(ctx, userID)
-		profile.AddXP(int64(xp))
-		s.profileRepo.Update(ctx, profile)
+		s.addXPToProfile(ctx, profile, int64(xp))
 	}
 
 	return result, xp, nil
 }
 
 func (s *StudentService) CompleteLesson(ctx context.Context, userID, lessonID string) (*entities.LessonProgress, int, error) {
-	// А. Получаем данные урока
 	lesson, err := s.courseRepo.GetLessonByID(ctx, lessonID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("lesson not found: %w", err)
 	}
 
-	// Б. Проверяем, не пройден ли он уже
 	progress, err := s.progressRepo.GetLessonProgress(ctx, userID, lessonID)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	if progress.IsCompleted {
-		// Если уже пройден, просто возвращаем (XP повторно не даем)
 		return progress, 0, nil
 	}
 
-	// В. Обновляем статус
 	progress.IsCompleted = true
 	progress.Status = entities.StatusCompleted
 	progress.LastAccessedAt = time.Now().UTC()
@@ -180,20 +168,17 @@ func (s *StudentService) CompleteLesson(ctx context.Context, userID, lessonID st
 		return nil, 0, err
 	}
 
-	// Г. Начисляем XP (если есть награда)
 	xpAwarded := 0
 	if lesson.XPReward > 0 {
 		profile, err := s.profileRepo.GetByUserID(ctx, userID)
 		if err == nil {
-			profile.AddXP(int64(lesson.XPReward))
-			profile.WeeklyXP += int64(lesson.XPReward) // Обновляем и недельный рейтинг
-			s.profileRepo.Update(ctx, profile)
+			s.updateStreak(profile)
+
+			s.addXPToProfile(ctx, profile, int64(lesson.XPReward))
 			xpAwarded = lesson.XPReward
 		}
 	}
 
-	// Д. Пересчитываем общий прогресс курса
-	// Нам нужно найти course_id через модуль
 	module, err := s.courseRepo.GetModuleByID(ctx, lesson.ModuleID)
 	if err == nil {
 		go s.recalculateCourseProgress(context.Background(), userID, module.CourseID)
@@ -202,9 +187,59 @@ func (s *StudentService) CompleteLesson(ctx context.Context, userID, lessonID st
 	return progress, xpAwarded, nil
 }
 
-// Вспомогательная функция для пересчета %
+func (s *StudentService) updateStreak(profile *entities.StudentProfile) {
+	now := time.Now().UTC()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+	if profile.LastActivityDate == nil {
+		// Первая активность
+		profile.CurrentStreak = 1
+		profile.LastActivityDate = &today
+	} else {
+		lastActivity := time.Date(
+			profile.LastActivityDate.Year(),
+			profile.LastActivityDate.Month(),
+			profile.LastActivityDate.Day(),
+			0, 0, 0, 0, time.UTC,
+		)
+
+		daysDiff := int(today.Sub(lastActivity).Hours() / 24)
+
+		if daysDiff == 0 {
+			// Активность сегодня уже была, ничего не меняем
+			return
+		} else if daysDiff == 1 {
+			// Следующий день подряд - увеличиваем стрик
+			profile.CurrentStreak++
+			profile.LastActivityDate = &today
+		} else {
+			// Пропустил дни - стрик сбрасывается
+			profile.CurrentStreak = 1
+			profile.LastActivityDate = &today
+		}
+	}
+
+	// Обновляем максимальный стрик
+	if profile.CurrentStreak > profile.MaxStreak {
+		profile.MaxStreak = profile.CurrentStreak
+	}
+}
+
+func (s *StudentService) addXPToProfile(ctx context.Context, profile *entities.StudentProfile, xp int64) {
+	profile.XP += xp
+	profile.WeeklyXP += xp
+
+	// Простой расчет уровня: 100 XP = 1 уровень
+	newLevel := int(profile.XP/100) + 1
+	if newLevel > profile.Level {
+		profile.Level = newLevel
+	}
+
+	profile.UpdatedAt = time.Now().UTC()
+	s.profileRepo.Update(ctx, profile)
+}
+
 func (s *StudentService) recalculateCourseProgress(ctx context.Context, userID, courseID string) {
-	// 1. Считаем всего уроков
 	modules, err := s.courseRepo.GetCourseStructure(ctx, courseID)
 	if err != nil {
 		return
@@ -246,7 +281,6 @@ func (s *StudentService) GetCourseProgress(ctx context.Context, userID, courseID
 }
 
 func (s *StudentService) CompleteOnboarding(ctx context.Context, userID string, grade int, subjectIDs []string) error {
-	// 1. Создаем или обновляем профиль (класс)
 	exists, err := s.profileRepo.Exists(ctx, userID)
 	if err != nil {
 		return err
@@ -271,15 +305,12 @@ func (s *StudentService) CompleteOnboarding(ctx context.Context, userID string, 
 		}
 	}
 
-	// 2. Сохраняем интересы
 	if err := s.subjectRepo.SetInterests(ctx, userID, subjectIDs); err != nil {
 		return fmt.Errorf("failed to set interests: %w", err)
 	}
 
 	return nil
 }
-
-// --- DASHBOARD DATA ---
 
 type DashboardData struct {
 	Profile       *entities.StudentProfile
@@ -297,30 +328,25 @@ type ActiveCourseData struct {
 }
 
 func (s *StudentService) GetDashboardData(ctx context.Context, userID string) (*DashboardData, error) {
-	// 1. Профиль (XP, уровень)
 	profile, err := s.profileRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		// Если профиля нет, возвращаем nil (фронт должен отправить на онбординг)
 		return nil, nil
 	}
 
-	// 2. Интересы
 	interests, err := s.subjectRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Активные курсы (с прогрессом)
 	activeProgress, err := s.progressRepo.GetUserActiveCourses(ctx, userID, 5)
 	if err != nil {
 		return nil, err
 	}
 
-	// Обогащаем прогресс данными о курсе (название, картинка)
 	var activeCourses []ActiveCourseData
 	for _, prog := range activeProgress {
 		course, err := s.courseRepo.GetByID(ctx, prog.CourseID)
-		if err == nil { // Если курс не найден, просто пропускаем
+		if err == nil {
 			activeCourses = append(activeCourses, ActiveCourseData{
 				CourseID:           course.ID,
 				Title:              course.Title,
@@ -337,4 +363,91 @@ func (s *StudentService) GetDashboardData(ctx context.Context, userID string) (*
 		Interests:     interests,
 		ActiveCourses: activeCourses,
 	}, nil
+}
+
+type LeaderboardEntry struct {
+	Rank      int
+	UserID    string
+	FirstName string
+	LastName  string
+	AvatarURL string
+	XP        int64
+	Level     int
+	LeagueID  int
+}
+
+func (s *StudentService) GetWeeklyLeaderboard(ctx context.Context, userID string, limit int) ([]LeaderboardEntry, *int, error) {
+	// 1. Получаем лигу пользователя
+	profile, err := s.profileRepo.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 2. Получаем топ игроков в этой лиге
+	profiles, err := s.profileRepo.GetLeagueLeaderboard(ctx, profile.CurrentLeagueID, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 3. Формируем список с рангами
+	entries := make([]LeaderboardEntry, len(profiles))
+	userRank := -1
+
+	for i, p := range profiles {
+		// Здесь нужно получить данные пользователя (имя, аватар)
+		// Это требует UserRepository - добавим позже или используем кэш
+		entries[i] = LeaderboardEntry{
+			Rank:     i + 1,
+			UserID:   p.UserID,
+			XP:       p.WeeklyXP,
+			Level:    p.Level,
+			LeagueID: p.CurrentLeagueID,
+		}
+
+		if p.UserID == userID {
+			userRank = i + 1
+		}
+	}
+
+	var userRankPtr *int
+	if userRank > 0 {
+		userRankPtr = &userRank
+	}
+
+	return entries, userRankPtr, nil
+}
+
+func (s *StudentService) GetGlobalLeaderboard(ctx context.Context, userID string, limit int) ([]LeaderboardEntry, *int, error) {
+	// Получаем топ по общему XP
+	profiles, err := s.profileRepo.GetLeaderboard(ctx, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	entries := make([]LeaderboardEntry, len(profiles))
+	userRank := -1
+
+	for i, p := range profiles {
+		entries[i] = LeaderboardEntry{
+			Rank:   i + 1,
+			UserID: p.UserID,
+			XP:     p.XP,
+			Level:  p.Level,
+		}
+
+		if p.UserID == userID {
+			userRank = i + 1
+		}
+	}
+
+	// Если пользователь не в топе, найдем его ранг отдельно
+	var userRankPtr *int
+	if userRank > 0 {
+		userRankPtr = &userRank
+	} else {
+		// TODO: добавить метод GetUserGlobalRank в ProfileRepository
+		// для подсчета позиции пользователя
+	}
+
+	return entries, userRankPtr, nil
 }

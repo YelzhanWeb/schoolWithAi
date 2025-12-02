@@ -13,6 +13,7 @@ import (
 	"backend/internal/adapters/http"
 	"backend/internal/adapters/storage"
 	"backend/internal/services/auth"
+	"backend/internal/services/scheduler"
 
 	"backend/internal/adapters/postgres/course"
 	"backend/internal/adapters/postgres/gamification"
@@ -133,6 +134,12 @@ func main() {
 	)
 	gService := gamificationService.NewGamificationService(gamificationRepo)
 
+	weeklyResetService := scheduler.NewWeeklyResetService(profileRepo, gamificationRepo)
+	schedulerCtx, cancelScheduler := context.WithCancel(context.Background())
+
+	go weeklyResetService.Start(schedulerCtx)
+	log.Println("Weekly reset scheduler started")
+
 	httpServer := http.NewServer(
 		authService,
 		cService,
@@ -161,6 +168,8 @@ func main() {
 		log.Fatalf("Server error: %v", err)
 	case sig := <-quit:
 		log.Printf("Received signal: %s", sig)
+
+		cancelScheduler()
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
