@@ -35,7 +35,6 @@ type Server struct {
 	studentService      *student.StudentService
 	gamificationService *gamification.GamificationService
 	jwtManager          *jwt.JWTManager
-	mlServiceURL        string
 }
 
 func NewServer(
@@ -47,7 +46,6 @@ func NewServer(
 	studentService *student.StudentService,
 	gService *gamification.GamificationService,
 	jwtSecret string,
-	mlServiceURL string,
 ) *Server {
 	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())
@@ -62,7 +60,6 @@ func NewServer(
 		studentService:      studentService,
 		gamificationService: gService,
 		jwtManager:          jwt.NewJWTManager(jwtSecret),
-		mlServiceURL:        mlServiceURL,
 	}
 
 	s.setupRoutes()
@@ -99,15 +96,17 @@ func (s *Server) setupRoutes() {
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/forgot-password", authHandler.ForgotPassword)
 			auth.POST("/reset-password", authHandler.ResetPassword)
 		}
 
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(s.jwtManager))
 		{
-			protected.POST("/auth/change-password", authHandler.ChangePassword)
 
 			protected.POST("/upload", uploadHandler.UploadFile)
+
+			protected.POST("/auth/change-password", authHandler.ChangePassword)
 
 			protected.POST("/courses", courseHandler.CreateCourse)
 			protected.PUT("/courses/:id", courseHandler.UpdateCourse)

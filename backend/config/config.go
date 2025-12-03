@@ -23,24 +23,38 @@ type Config struct {
 	MinioUseSSL     bool
 	MinioBucketName string
 	MinioPublicURL  string
+
+	// SMTP
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPassword string
+	SMTPFrom     string
 }
 
 func LoadConfig() Config {
 	return Config{
-		DBHost:          GetEnv("DB_HOST", "localhost"),
-		DBPort:          getEnvAsInt("DB_PORT", 5432),
-		DBUser:          GetEnv("DB_USER", "admin"),
-		DBPassword:      GetEnv("DB_PASSWORD", "admin123"),
-		DBName:          GetEnv("DB_NAME", "education_platform"),
-		DBSSLMode:       GetEnv("DB_SSLMODE", "disable"),
-		ServerPort:      GetEnv("SERVER_PORT", "8080"),
-		JWTSecret:       GetEnv("JWT_SECRET", "secret"),
+		DBHost:     GetEnv("DB_HOST", "localhost"),
+		DBPort:     getEnvAsInt("DB_PORT", 5432),
+		DBUser:     GetEnv("DB_USER", "admin"),
+		DBPassword: GetEnv("DB_PASSWORD", "admin123"),
+		DBName:     GetEnv("DB_NAME", "education_platform"),
+		DBSSLMode:  GetEnv("DB_SSLMODE", "disable"),
+		ServerPort: GetEnv("SERVER_PORT", "8080"),
+		JWTSecret:  GetEnv("JWT_SECRET", "secret"),
+		// MINIO
 		MinioEndpoint:   GetEnv("MINIO_ENDPOINT", "localhost:9000"),
 		MinioUser:       GetEnv("MINIO_ROOT_USER", "admin"),
 		MinioPassword:   GetEnv("MINIO_ROOT_PASSWORD", "admin123"),
 		MinioUseSSL:     GetEnv("MINIO_USE_SSL", "false") == "true",
 		MinioBucketName: GetEnv("MINIO_BUCKET_NAME", "school-assets"),
 		MinioPublicURL:  GetEnv("MINIO_PUBLIC_URL", "http://localhost:9000"),
+		// SMTP
+		SMTPHost:     GetEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
+		SMTPUser:     GetEnv("SMTP_USER", "bakytkan.elzhan@gmail.com"),
+		SMTPPassword: GetEnv("SMTP_PASSWORD", "admin123"),
+		SMTPFrom:     GetEnv("SMTP_FROM", "School With AI <no-reply@school.com>"),
 	}
 }
 

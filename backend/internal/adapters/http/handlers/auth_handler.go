@@ -19,8 +19,9 @@ type ErrorResponse struct {
 type AuthService interface {
 	Register(ctx context.Context, user *entities.User, password string, avatar *multipart.FileHeader) error
 	Login(ctx context.Context, email, password string) (string, error)
+	ForgotPassword(ctx context.Context, email string) error
 	ChangePassword(ctx context.Context, userID string, oldPassword, newPassword string) error
-	ResetPassword(ctx context.Context, email, oldPassword, newPassword string) error
+	ResetPassword(ctx context.Context, email, code, newPassword string) error
 }
 
 type AuthHandler struct {
@@ -151,6 +152,66 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	log.Info().Str("email", req.Email).Msg("user logged in successfully")
 }
 
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// ForgotPassword godoc
+// @Summary Request password reset code
+// @Description Sends a 6-digit code to the user's email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body ForgotPasswordRequest true "Email"
+// @Success 200
+// @Router /v1/auth/forgot-password [post]
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	if err := h.authService.ForgotPassword(c.Request.Context(), req.Email); err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": "If user exists, code sent"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Code sent"})
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email"        binding:"required,email"`
+	Code        string `json:"code"         binding:"required,len=6"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
+// ResetPassword godoc
+// @Summary Reset password with code
+// @Description Change password using email and the code received via email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body ResetPasswordRequest true "Reset payload"
+// @Success 200
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/auth/reset-password [post]
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	err := h.authService.ResetPassword(c.Request.Context(), req.Email, req.Code, req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
+}
+
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required,min=8"`
@@ -202,44 +263,5 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 	log.Info().Str("user_id", uidStr).Msg("password changed successfully")
 
-	c.Status(http.StatusOK)
-}
-
-type ResetPasswordRequest struct {
-	Email       string `json:"email"        binding:"required,email"`
-	OldPassword string `json:"old_password" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=8"`
-}
-
-// ResetPassword godoc
-// @Summary Reset password (public)
-// @Description Change password using email and old password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body ResetPasswordRequest true "Reset password payload"
-// @Success 200
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
-// @Router /v1/auth/reset-password [post]
-func (h *AuthHandler) ResetPassword(c *gin.Context) {
-	var req ResetPasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid input: " + err.Error()})
-		return
-	}
-
-	err := h.authService.ResetPassword(c.Request.Context(), req.Email, req.OldPassword, req.NewPassword)
-	if err != nil {
-		if errors.Is(err, entities.ErrInvalidCredentials) {
-			c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid email or old password"})
-			return
-		}
-		log.Error().Err(err).Str("email", req.Email).Msg("failed to reset password")
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "internal server error"})
-		return
-	}
-
-	log.Info().Str("email", req.Email).Msg("password reset successfully")
 	c.Status(http.StatusOK)
 }

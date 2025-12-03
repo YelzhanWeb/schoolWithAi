@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"backend/config"
+	"backend/internal/adapters/email"
 	"backend/internal/adapters/http"
 	"backend/internal/adapters/storage"
 	"backend/internal/services/auth"
@@ -106,8 +107,14 @@ func main() {
 	log.Println("All repositories connected")
 
 	jwtManager := jwt.NewJWTManager(cfg.JWTSecret)
-	mlServiceURL := config.GetEnv("ML_SERVICE_URL", "http://localhost:5000")
-	// mlClient := ml_client.NewMLClient(mlServiceURL)
+
+	emailService := email.NewGomailService(
+		cfg.SMTPHost,
+		cfg.SMTPPort,
+		cfg.SMTPUser,
+		cfg.SMTPPassword,
+		cfg.SMTPFrom,
+	)
 	minioStorage, err := storage.NewMinioStorage(
 		cfg.MinioEndpoint,
 		cfg.MinioUser,
@@ -120,7 +127,7 @@ func main() {
 		log.Fatalf("Failed to init MinIO: %v", err)
 	}
 
-	authService := auth.NewAuthService(userRepo, jwtManager, minioStorage)
+	authService := auth.NewAuthService(userRepo, jwtManager, minioStorage, emailService)
 	subjService := subjectService.NewSubjectService(subjectRepo)
 	cService := courseService.NewCourseService(courseRepo)
 	testService := testService.NewTestService(testRepo)
@@ -149,7 +156,6 @@ func main() {
 		studentService,
 		gService,
 		cfg.JWTSecret,
-		mlServiceURL,
 	)
 
 	log.Println("Starting Education Platform API...")
