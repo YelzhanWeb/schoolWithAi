@@ -98,7 +98,6 @@ func (r *CourseRepository) GetByAuthorID(ctx context.Context, authorID string) (
 }
 
 func (r *CourseRepository) GetCatalog(ctx context.Context) ([]entities.Course, error) {
-	// Выбираем только опубликованные курсы
 	query := `
 		SELECT id, author_id, subject_id, title, description, difficulty_level, cover_image_url, is_published, created_at 
 		FROM courses 
@@ -121,10 +120,71 @@ func (r *CourseRepository) GetCatalog(ctx context.Context) ([]entities.Course, e
 		); err != nil {
 			return nil, err
 		}
-		courses = append(courses, *d.toEntity())
+		entity := d.toEntity()
+		entity.Tags = []entities.Tag{}
+		courses = append(courses, *entity)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	if len(courses) == 0 {
+		return courses, nil
+	}
+
+	courseIDs := make([]string, len(courses))
+	for i, c := range courses {
+		courseIDs[i] = c.ID
+	}
+
+	tagsMap, err := r.getTagsForCourses(ctx, courseIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch tags: %w", err)
+	}
+
+	// 4. Распределяем теги по курсам
+	for i := range courses {
+		if tags, ok := tagsMap[courses[i].ID]; ok {
+			courses[i].Tags = tags
+		}
 	}
 
 	return courses, nil
+}
+
+func (r *CourseRepository) getTagsForCourses(ctx context.Context, courseIDs []string) (map[string][]entities.Tag, error) {
+	query := `
+		SELECT ct.course_id, t.id, t.name, t.slug 
+		FROM tags t
+		JOIN course_tags ct ON t.id = ct.tag_id
+		WHERE ct.course_id = ANY($1)
+	`
+
+	rows, err := r.pool.Query(ctx, query, courseIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tagsMap := make(map[string][]entities.Tag)
+
+	for rows.Next() {
+		var courseID string
+		var t tagDTO
+
+		if err := rows.Scan(&courseID, &t.ID, &t.Name, &t.Slug); err != nil {
+			return nil, err
+		}
+
+		tagsMap[courseID] = append(tagsMap[courseID], t.toEntity())
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tagsMap, nil
 }
 
 func (r *CourseRepository) GetByID(ctx context.Context, id string) (*entities.Course, error) {

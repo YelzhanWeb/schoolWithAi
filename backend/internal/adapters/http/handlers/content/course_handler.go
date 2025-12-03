@@ -141,6 +141,16 @@ func (h *CourseHandler) GetCatalog(c *gin.Context) {
 
 	respCourses := make([]CourseDetailResponse, 0, len(courses))
 	for _, course := range courses {
+		tagsResp := make([]TagResponse, 0, len(course.Tags))
+		for _, t := range course.Tags {
+			tagsResp = append(tagsResp, TagResponse{
+				ID:   t.ID,
+				Name: t.Name,
+				Slug: t.Slug,
+			})
+		}
+		// ----------------------------------------
+
 		respCourses = append(respCourses, CourseDetailResponse{
 			ID:              course.ID,
 			AuthorID:        course.AuthorID,
@@ -150,6 +160,7 @@ func (h *CourseHandler) GetCatalog(c *gin.Context) {
 			DifficultyLevel: course.DifficultyLevel,
 			CoverImageURL:   course.CoverImageURL,
 			IsPublished:     course.IsPublished,
+			Tags:            tagsResp,
 		})
 	}
 
