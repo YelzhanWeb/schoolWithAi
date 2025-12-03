@@ -110,8 +110,8 @@ func (h *TestHandler) CreateTest(c *gin.Context) {
 }
 
 type AnswerResponse struct {
-	Text string `json:"text"`
-	// IsCorrect bool   `json:"is_correct"`
+	Text      string `json:"text"`
+	IsCorrect bool   `json:"is_correct"`
 }
 
 type QuestionResponse struct {
@@ -136,7 +136,7 @@ type TestResponse struct {
 // @Accept json
 // @Produce json
 // @Param id path string true "Module ID"
-// @Success 201 {object} CreateTestResponse
+// @Success 200 {object} TestResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 404
 // @Failure 500
@@ -159,11 +159,46 @@ func (h *TestHandler) GetTest(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	c.JSON(http.StatusOK, mapTestToResponse(test))
+	c.JSON(http.StatusOK, mapTestToResponse(test, false))
 	log.Info().Str("module_id", moduleID).Str("test_id", test.ID).Msg("test got successfully")
 }
 
-func mapTestToResponse(test *entities.Test) TestResponse {
+// GetTestWithAnswer godoc
+// @Summary Get test details with correct answer
+// @Description Get test structure with questions and answers
+// @Tags tests
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Module ID"
+// @Success 200 {object} TestResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 404
+// @Failure 500
+// @Router /v1/modules/{id}/test [get]
+func (h *TestHandler) GetTestWithAnswer(c *gin.Context) {
+	_, exists := c.Get("role")
+	if !exists {
+		log.Error().Msg("user unauthorized")
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "unauthorized"})
+		return
+	}
+	moduleID := c.Param("id")
+	test, err := h.service.GetTestByModule(c.Request.Context(), moduleID)
+	if err != nil {
+		log.Error().Err(err).Str("module_id", moduleID).Msg("failed to get test by moduleID")
+		if errors.Is(err, entities.ErrNotFound) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusOK, mapTestToResponse(test, true))
+	log.Info().Str("module_id", moduleID).Str("test_id", test.ID).Msg("test got successfully")
+}
+
+func mapTestToResponse(test *entities.Test, withCorrectAnswer bool) TestResponse {
 	resp := TestResponse{
 		TestID:       test.ID,
 		ModuleID:     test.ModuleID,
@@ -178,6 +213,13 @@ func mapTestToResponse(test *entities.Test) TestResponse {
 		}
 
 		for _, a := range q.Answers {
+			if withCorrectAnswer {
+				qResp.Answers = append(qResp.Answers, AnswerResponse{
+					Text:      a.Text,
+					IsCorrect: a.IsCorrect,
+				})
+				continue
+			}
 			qResp.Answers = append(qResp.Answers, AnswerResponse{
 				Text: a.Text,
 			})
