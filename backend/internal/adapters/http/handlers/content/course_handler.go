@@ -33,6 +33,9 @@ type CourseService interface {
 	GetFullStructure(ctx context.Context, courseID string) ([]entities.Module, error)
 
 	GetAllTags(ctx context.Context) ([]entities.Tag, error)
+
+	ToggleFavorite(ctx context.Context, userID, courseID string) (bool, error)
+	GetUserFavorites(ctx context.Context, userID string) ([]entities.Course, error)
 }
 
 type ErrorResponse struct {

@@ -108,14 +108,18 @@ func (s *Server) setupRoutes() {
 
 			protected.POST("/auth/change-password", authHandler.ChangePassword)
 
+			protected.POST("/courses/:id/favorite", courseHandler.ToggleFavorite)
+			protected.GET("/courses/favorites", courseHandler.GetFavorites)
+
 			protected.POST("/courses", courseHandler.CreateCourse)
 			protected.PUT("/courses/:id", courseHandler.UpdateCourse)
 			protected.POST("/courses/:id/publish", courseHandler.ChangePublishStatus)
+			protected.DELETE("/courses/:id", courseHandler.DeleteCourse)
 			protected.GET("/courses/:id/structure", courseHandler.GetStructure)
 			protected.GET("/courses/:id", courseHandler.GetCourse)
-			protected.GET("/teacher/courses", courseHandler.GetMyCourses)
-			protected.DELETE("/courses/:id", courseHandler.DeleteCourse)
 			protected.GET("/catalog", courseHandler.GetCatalog)
+
+			protected.GET("/teacher/courses", courseHandler.GetMyCourses)
 
 			protected.POST("/modules", courseHandler.CreateModule)
 			protected.PUT("/modules/:id", courseHandler.UpdateModule)
@@ -128,6 +132,7 @@ func (s *Server) setupRoutes() {
 
 			protected.POST("/tests", testHandler.CreateTest)
 			protected.GET("/modules/:id/test", testHandler.GetTest)
+			protected.GET("/modules/{id}/test-with-answers", testHandler.GetTestWithAnswer)
 			protected.PUT("/tests/:id", testHandler.UpdateTest)
 			protected.DELETE("/tests/:id", testHandler.DeleteTest)
 

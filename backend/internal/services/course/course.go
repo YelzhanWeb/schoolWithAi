@@ -27,6 +27,10 @@ type CourseRepository interface {
 	DeleteLesson(ctx context.Context, id string) error
 
 	GetAllTags(ctx context.Context) ([]entities.Tag, error)
+
+	ToggleFavorite(ctx context.Context, userID, courseID string) (bool, error)
+	GetUserFavorites(ctx context.Context, userID string) ([]entities.Course, error)
+	IsFavorite(ctx context.Context, userID, courseID string) (bool, error)
 }
 
 type CourseService struct {
@@ -194,4 +198,16 @@ func (s *CourseService) GetFullStructure(ctx context.Context, courseID string) (
 
 func (s *CourseService) GetAllTags(ctx context.Context) ([]entities.Tag, error) {
 	return s.repo.GetAllTags(ctx)
+}
+
+func (s *CourseService) ToggleFavorite(ctx context.Context, userID, courseID string) (bool, error) {
+	return s.repo.ToggleFavorite(ctx, userID, courseID)
+}
+
+func (s *CourseService) GetUserFavorites(ctx context.Context, userID string) ([]entities.Course, error) {
+	return s.repo.GetUserFavorites(ctx, userID)
+}
+
+func (s *CourseService) IsCourseFavorite(ctx context.Context, userID, courseID string) (bool, error) {
+	return s.repo.IsFavorite(ctx, userID, courseID)
 }

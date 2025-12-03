@@ -173,16 +173,24 @@ func (h *TestHandler) GetTest(c *gin.Context) {
 // @Param id path string true "Module ID"
 // @Success 200 {object} TestResponse
 // @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
 // @Failure 404
 // @Failure 500
-// @Router /v1/modules/{id}/test [get]
+// @Router /v1/modules/{id}/test-with-answers [get]
 func (h *TestHandler) GetTestWithAnswer(c *gin.Context) {
-	_, exists := c.Get("role")
+	role, exists := c.Get("role")
 	if !exists {
 		log.Error().Msg("user unauthorized")
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "unauthorized"})
 		return
 	}
+
+	if role != "teacher" && role != "admin" {
+		log.Error().Msg("only teachers can create courses")
+		c.JSON(http.StatusForbidden, ErrorResponse{Message: "only teachers can create courses"})
+		return
+	}
+
 	moduleID := c.Param("id")
 	test, err := h.service.GetTestByModule(c.Request.Context(), moduleID)
 	if err != nil {

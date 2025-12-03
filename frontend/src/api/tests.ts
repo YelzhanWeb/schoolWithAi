@@ -43,6 +43,10 @@ export const testsApi = {
     const response = await api.get<Test>(`/modules/${moduleId}/test`);
     return response.data;
   },
+  getByModuleIdWithAnswers: async (moduleId: string): Promise<Test> => {
+    const response = await api.get<Test>(`/modules/${moduleId}/test`);
+    return response.data;
+  },
 
   create: async (data: CreateTestRequest): Promise<{ test_id: string }> => {
     const response = await api.post<{ test_id: string }>("/tests", data);

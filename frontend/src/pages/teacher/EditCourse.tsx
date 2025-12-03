@@ -201,7 +201,7 @@ export const EditCoursePage = () => {
     setIsCreatingTest(false);
 
     try {
-      const test = await testsApi.getByModuleId(moduleId);
+      const test = await testsApi.getByModuleIdWithAnswers(moduleId);
       setTestData(test);
     } catch {
       setTestData(null);
