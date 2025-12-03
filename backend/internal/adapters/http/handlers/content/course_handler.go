@@ -1,4 +1,4 @@
-package handlers
+package content
 
 import (
 	"context"
@@ -33,6 +33,10 @@ type CourseService interface {
 	GetFullStructure(ctx context.Context, courseID string) ([]entities.Module, error)
 
 	GetAllTags(ctx context.Context) ([]entities.Tag, error)
+}
+
+type ErrorResponse struct {
+	Message string `json:"message" example:"something went wrong"`
 }
 
 type CourseHandler struct {
@@ -220,6 +224,59 @@ func (h *CourseHandler) GetCourse(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// GetStructure godoc
+// @Summary Get full course structure
+// @Description Get modules and lessons for editor
+// @Tags courses
+// @Security BearerAuth
+// @Param id path string true "Course ID"
+// @Success 200 {object} GetStructureResponse
+// @Failure 500
+// @Router /v1/courses/{id}/structure [get]
+func (h *CourseHandler) GetStructure(c *gin.Context) {
+	courseID := c.Param("id")
+
+	modulesEntities, err := h.courseService.GetFullStructure(c.Request.Context(), courseID)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		log.Error().Err(err).Str("course_id", courseID).Msg("failed to get course structure")
+		return
+	}
+
+	modulesResp := make([]ModuleResponse, 0, len(modulesEntities))
+
+	for _, m := range modulesEntities {
+		lessonsResp := make([]LessonResponse, 0, len(m.Lessons))
+		for _, l := range m.Lessons {
+			lessonsResp = append(lessonsResp, LessonResponse{
+				ID:                l.ID,
+				ModuleID:          l.ModuleID,
+				Title:             l.Title,
+				ContentText:       l.ContentText,
+				VideoURL:          l.VideoURL,
+				FileAttachmentURL: l.FileAttachmentURL,
+				XPReward:          l.XPReward,
+				OrderIndex:        l.OrderIndex,
+			})
+		}
+
+		modulesResp = append(modulesResp, ModuleResponse{
+			ID:         m.ID,
+			CourseID:   m.CourseID,
+			Title:      m.Title,
+			OrderIndex: m.OrderIndex,
+			Lessons:    lessonsResp,
+		})
+	}
+
+	c.JSON(http.StatusOK, GetStructureResponse{
+		Modules: modulesResp,
+	})
+	log.Info().
+		Str("course_id", courseID).
+		Msg("course structure got successfully")
+}
+
 type CourseListResponse struct {
 	Courses []CourseDetailResponse `json:"courses"`
 }
@@ -244,7 +301,6 @@ func (h *CourseHandler) GetMyCourses(c *gin.Context) {
 
 	respCourses := make([]CourseDetailResponse, 0, len(courses))
 	for _, course := range courses {
-		// Тут можно теги не грузить для списка, чтобы быстрее было, или загрузить отдельно
 		respCourses = append(respCourses, CourseDetailResponse{
 			ID:              course.ID,
 			AuthorID:        course.AuthorID,
@@ -254,7 +310,6 @@ func (h *CourseHandler) GetMyCourses(c *gin.Context) {
 			DifficultyLevel: course.DifficultyLevel,
 			CoverImageURL:   course.CoverImageURL,
 			IsPublished:     course.IsPublished,
-			// Tags: ... (можно оставить пустым для списка)
 		})
 	}
 
@@ -412,409 +467,4 @@ func (h *CourseHandler) DeleteCourse(c *gin.Context) {
 		Str("user_id", userID).
 		Str("course_id", courseID).
 		Msg("course deleted successfully")
-}
-
-type CreateModuleRequest struct {
-	CourseID   string `json:"course_id"   binding:"required"`
-	Title      string `json:"title"       binding:"required"`
-	OrderIndex int    `json:"order_index" binding:"required"`
-}
-
-type CreateModuleResponse struct {
-	ModuleID string `json:"module_id" binding:"required"`
-}
-
-// CreateModule godoc
-// @Summary Add module to course
-// @Tags modules
-// @Security BearerAuth
-// @Accept json
-// @Produce json
-// @Param input body CreateModuleRequest true "Module data"
-// @Success 201 {object} CreateModuleResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 500
-// @Router /v1/modules [post]
-func (h *CourseHandler) CreateModule(c *gin.Context) {
-	userID := c.GetString("user_id")
-	var req CreateModuleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
-		log.Error().Err(err).Str("user_id", userID).Msg("failed to parse json request")
-		return
-	}
-
-	module := entities.NewModule(req.CourseID, req.Title, req.OrderIndex)
-
-	if err := h.courseService.CreateModule(c.Request.Context(), userID, module); err != nil {
-		c.Status(http.StatusInternalServerError)
-		log.Error().Err(err).Str("user_id", userID).Msg("failed to create module")
-		return
-	}
-
-	c.JSON(http.StatusCreated, CreateModuleResponse{
-		ModuleID: module.ID,
-	})
-	log.Info().
-		Str("user_id", userID).
-		Str("course_id", module.CourseID).
-		Str("module_id", module.ID).
-		Str("module_title", module.Title).
-		Int("module_order_index", module.OrderIndex).
-		Msg("module created successfully")
-}
-
-type UpdateModuleRequest struct {
-	Title      string `json:"title"`
-	OrderIndex int    `json:"order_index"`
-}
-
-// UpdateModule godoc
-// @Summary Update module
-// @Tags modules
-// @Security BearerAuth
-// @Accept json
-// @Param id path string true "Module ID"
-// @Param input body UpdateModuleRequest true "Data"
-// @Success 200
-// @Failure 400 {object} ErrorResponse
-// @Failure 500
-// @Router /v1/modules/{id} [put]
-func (h *CourseHandler) UpdateModule(c *gin.Context) {
-	userID := c.GetString("user_id")
-	moduleID := c.Param("id")
-
-	var req UpdateModuleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
-		log.Error().Err(err).Str("user_id", userID).Str("module_id", moduleID).Msg("failed to parse json request")
-		return
-	}
-
-	module := &entities.Module{
-		ID:         moduleID,
-		Title:      req.Title,
-		OrderIndex: req.OrderIndex,
-	}
-
-	if err := h.courseService.UpdateModule(c.Request.Context(), userID, module); err != nil {
-		c.Status(http.StatusInternalServerError)
-		log.Error().Err(err).Str("user_id", userID).Str("module_id", moduleID).Msg("failed to update module")
-		return
-	}
-
-	c.Status(http.StatusOK)
-	log.Info().
-		Str("user_id", userID).
-		Str("course_id", module.CourseID).
-		Str("module_id", module.ID).
-		Str("module_title", module.Title).
-		Int("module_order_index", module.OrderIndex).
-		Msg("module updated successfully")
-}
-
-// DeleteModule godoc
-// @Summary Delete module
-// @Tags modules
-// @Security BearerAuth
-// @Param id path string true "Module ID"
-// @Success 200
-// @Failure 500
-// @Router /v1/modules/{id} [delete]
-func (h *CourseHandler) DeleteModule(c *gin.Context) {
-	userID := c.GetString("user_id")
-	moduleID := c.Param("id")
-
-	if err := h.courseService.DeleteModule(c.Request.Context(), userID, moduleID); err != nil {
-		c.Status(http.StatusInternalServerError)
-		log.Error().Err(err).Str("user_id", userID).Str("module_id", moduleID).Msg("failed to delete module")
-		return
-	}
-
-	c.Status(http.StatusOK)
-	log.Info().
-		Str("user_id", userID).
-		Str("module_id", moduleID).
-		Msg("module deleted successfully")
-}
-
-type CreateLessonRequest struct {
-	ModuleID          string `json:"module_id"           binding:"required"`
-	Title             string `json:"title"               binding:"required"`
-	ContentText       string `json:"content_text"`
-	VideoURL          string `json:"video_url"`
-	FileAttachmentURL string `json:"file_attachment_url"`
-	OrderIndex        int    `json:"order_index"         binding:"required"`
-	XPReward          int    `json:"xp_reward"`
-}
-
-type CreateLessonResponse struct {
-	LessonID string `json:"lesson_id" binding:"required"`
-}
-
-// CreateLesson godoc
-// @Summary Add lesson to module
-// @Tags lessons
-// @Security BearerAuth
-// @Accept json
-// @Param input body CreateLessonRequest true "Lesson data"
-// @Success 201 {object} CreateLessonResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 500
-// @Router /v1/lessons [post]
-func (h *CourseHandler) CreateLesson(c *gin.Context) {
-	userID := c.GetString("user_id")
-	var req CreateLessonRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: err.Error()})
-		return
-	}
-
-	lesson := entities.NewLesson(req.ModuleID, req.Title, req.OrderIndex)
-	lesson.ContentText = req.ContentText
-	lesson.VideoURL = req.VideoURL
-	lesson.FileAttachmentURL = req.FileAttachmentURL
-
-	if req.XPReward > 0 {
-		lesson.XPReward = req.XPReward
-	}
-
-	if err := h.courseService.CreateLesson(c.Request.Context(), userID, lesson); err != nil {
-		c.Status(http.StatusInternalServerError)
-		log.Error().Err(err).Str("user_id", userID).Str("module_id", req.ModuleID).Msg("failed to create lesson")
-		return
-	}
-
-	c.JSON(http.StatusCreated, CreateLessonResponse{
-		LessonID: lesson.ID,
-	})
-
-	log.Info().
-		Str("user_id", userID).
-		Str("module_id", req.ModuleID).
-		Str("lesson_id", lesson.ID).
-		Str("lesson_title", lesson.Title).
-		Msg("module created successfully")
-}
-
-type LessonResponse struct {
-	ID                string `json:"id"`
-	ModuleID          string `json:"module_id"`
-	Title             string `json:"title"`
-	ContentText       string `json:"content_text"`
-	VideoURL          string `json:"video_url"`
-	FileAttachmentURL string `json:"file_attachment_url"`
-	XPReward          int    `json:"xp_reward"`
-	OrderIndex        int    `json:"order_index"`
-}
-
-// GetLesson godoc
-// @Summary Get full lesson details
-// @Description Get content, video url and attachments for a specific lesson
-// @Tags lessons
-// @Security BearerAuth
-// @Param id path string true "Lesson ID"
-// @Success 200 {object} LessonResponse
-// @Failure 404
-// @Failure 500
-// @Router /v1/lessons/{id} [get]
-func (h *CourseHandler) GetLesson(c *gin.Context) {
-	lessonID := c.Param("id")
-
-	lesson, err := h.courseService.GetLessonByID(c.Request.Context(), lessonID)
-	if err != nil {
-		log.Error().Err(err).Str("lesson_id", lessonID).Msg("failed to get lesson by id")
-		if errors.Is(err, entities.ErrNotFound) {
-			c.Status(http.StatusNotFound)
-			return
-		}
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-
-	c.JSON(http.StatusOK, LessonResponse{
-		ID:                lesson.ID,
-		ModuleID:          lesson.ModuleID,
-		Title:             lesson.Title,
-		ContentText:       lesson.ContentText,
-		VideoURL:          lesson.VideoURL,
-		FileAttachmentURL: lesson.FileAttachmentURL,
-		XPReward:          lesson.XPReward,
-		OrderIndex:        lesson.OrderIndex,
-	})
-}
-
-type UpdateLessonRequest struct {
-	Title             string `json:"title"`
-	ContentText       string `json:"content_text"`
-	VideoURL          string `json:"video_url"`
-	FileAttachmentURL string `json:"file_attachment_url"`
-	OrderIndex        int    `json:"order_index"`
-	XPReward          int    `json:"xp_reward"`
-}
-
-// UpdateLesson godoc
-// @Summary Update lesson content
-// @Tags lessons
-// @Security BearerAuth
-// @Accept json
-// @Param id path string true "Lesson ID"
-// @Param input body UpdateLessonRequest true "Data"
-// @Success 200
-// @Failure 400 {object} ErrorResponse
-// @Failure 500
-// @Router /v1/lessons/{id} [put]
-func (h *CourseHandler) UpdateLesson(c *gin.Context) {
-	userID := c.GetString("user_id")
-	lessonID := c.Param("id")
-
-	var req UpdateLessonRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid json request"})
-		log.Error().Err(err).Str("user_id", userID).Str("lesson_id", lessonID).Msg("failed to parse json request")
-		return
-	}
-	lesson := &entities.Lesson{
-		ID:                lessonID,
-		Title:             req.Title,
-		ContentText:       req.ContentText,
-		VideoURL:          req.VideoURL,
-		FileAttachmentURL: req.FileAttachmentURL,
-		OrderIndex:        req.OrderIndex,
-	}
-
-	if req.XPReward > 0 {
-		lesson.XPReward = req.XPReward
-	}
-
-	if err := h.courseService.UpdateLesson(c.Request.Context(), userID, lesson); err != nil {
-		c.Status(http.StatusInternalServerError)
-		log.Error().Err(err).Str("user_id", userID).Str("lesson_id", lessonID).Msg("failed to update lesson")
-		return
-	}
-	c.Status(http.StatusOK)
-	log.Info().Str("user_id", userID).Str("lesson_id", lessonID).Msg("lesson updated successfully")
-}
-
-// DeleteLesson godoc
-// @Summary Delete lesson content
-// @Tags lessons
-// @Security BearerAuth
-// @Param id path string true "Lesson ID"
-// @Success 200
-// @Failure 400 {object} ErrorResponse
-// @Failure 500
-// @Router /v1/lessons/{id} [delete]
-func (h *CourseHandler) DeleteLesson(c *gin.Context) {
-	userID := c.GetString("user_id")
-	lessonID := c.Param("id")
-
-	if err := h.courseService.DeleteLesson(c.Request.Context(), userID, lessonID); err != nil {
-		c.Status(http.StatusInternalServerError)
-		log.Error().Err(err).Str("user_id", userID).Str("lesson_id", lessonID).Msg("failed to delete lesson")
-		return
-	}
-	c.Status(http.StatusOK)
-	log.Info().Str("user_id", userID).Str("lesson_id", lessonID).Msg("lesson deleted successfully")
-}
-
-type GetStructureResponse struct {
-	Modules []ModuleResponse `json:"modules"`
-}
-
-type ModuleResponse struct {
-	ID         string           `json:"id"`
-	CourseID   string           `json:"course_id"`
-	Title      string           `json:"title"`
-	OrderIndex int              `json:"order_index"`
-	Lessons    []LessonResponse `json:"lessons"`
-}
-
-// GetStructure godoc
-// @Summary Get full course structure
-// @Description Get modules and lessons for editor
-// @Tags courses
-// @Security BearerAuth
-// @Param id path string true "Course ID"
-// @Success 200 {object} GetStructureResponse
-// @Failure 500
-// @Router /v1/courses/{id}/structure [get]
-func (h *CourseHandler) GetStructure(c *gin.Context) {
-	courseID := c.Param("id")
-
-	modulesEntities, err := h.courseService.GetFullStructure(c.Request.Context(), courseID)
-	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		log.Error().Err(err).Str("course_id", courseID).Msg("failed to get course structure")
-		return
-	}
-
-	modulesResp := make([]ModuleResponse, 0, len(modulesEntities))
-
-	for _, m := range modulesEntities {
-		lessonsResp := make([]LessonResponse, 0, len(m.Lessons))
-		for _, l := range m.Lessons {
-			lessonsResp = append(lessonsResp, LessonResponse{
-				ID:                l.ID,
-				ModuleID:          l.ModuleID,
-				Title:             l.Title,
-				ContentText:       l.ContentText,
-				VideoURL:          l.VideoURL,
-				FileAttachmentURL: l.FileAttachmentURL,
-				XPReward:          l.XPReward,
-				OrderIndex:        l.OrderIndex,
-			})
-		}
-
-		modulesResp = append(modulesResp, ModuleResponse{
-			ID:         m.ID,
-			CourseID:   m.CourseID,
-			Title:      m.Title,
-			OrderIndex: m.OrderIndex,
-			Lessons:    lessonsResp,
-		})
-	}
-
-	c.JSON(http.StatusOK, GetStructureResponse{
-		Modules: modulesResp,
-	})
-	log.Info().
-		Str("course_id", courseID).
-		Msg("course structure got successfully")
-}
-
-type GetAllTagsResponse struct {
-	Tags []TagResponse `json:"tags"`
-}
-
-// GetTags godoc
-// @Summary Get all tags
-// @Description Get list of available tags
-// @Tags tags
-// @Produce json
-// @Success 200 {object} GetAllTagsResponse
-// @Failure 500
-// @Router /v1/tags [get]
-func (h *CourseHandler) GetTags(c *gin.Context) {
-	tags, err := h.courseService.GetAllTags(c.Request.Context())
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get all tags")
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-
-	tagsResp := make([]TagResponse, 0, len(tags))
-	for _, t := range tags {
-		tagsResp = append(tagsResp, TagResponse{
-			ID:   t.ID,
-			Name: t.Name,
-			Slug: t.Slug,
-		})
-	}
-
-	c.JSON(http.StatusOK, GetAllTagsResponse{
-		Tags: tagsResp,
-	})
-
-	log.Info().Msg("all tags got successfully")
 }

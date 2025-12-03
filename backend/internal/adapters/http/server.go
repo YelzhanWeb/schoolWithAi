@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"backend/internal/adapters/http/handlers"
+	"backend/internal/adapters/http/handlers/content"
 	"backend/internal/adapters/http/middleware"
 	"backend/internal/adapters/storage"
 	"backend/internal/services/auth"
@@ -82,7 +83,7 @@ func (s *Server) setupRoutes() {
 	api := s.router.Group("/v1")
 	{
 		authHandler := handlers.NewAuthHandler(s.authService)
-		courseHandler := handlers.NewCourseHandler(s.courseService)
+		courseHandler := content.NewCourseHandler(s.courseService)
 		subjectHandler := handlers.NewSubjectHandler(s.subjectService)
 		uploadHandler := handlers.NewUploadHandler(s.uploadService)
 		testHandler := handlers.NewTestHandler(s.testService)
