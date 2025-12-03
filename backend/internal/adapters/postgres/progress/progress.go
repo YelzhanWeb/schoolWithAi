@@ -221,3 +221,36 @@ func (r *ProgressRepository) GetUserActiveCourses(
 
 	return list, nil
 }
+
+// Добавьте этот метод в ProgressRepository
+
+func (r *ProgressRepository) GetAllUserActiveCourses(ctx context.Context, userID string) ([]entities.CourseProgress, error) {
+	query := `
+		SELECT user_id, course_id, completed_lessons_count, total_lessons_count, 
+		       progress_percentage, is_completed, updated_at
+		FROM course_progress
+		WHERE user_id = $1 AND is_completed = false
+		ORDER BY updated_at DESC
+	`
+	// Без LIMIT
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get all active courses: %w", err)
+	}
+	defer rows.Close()
+
+	var list []entities.CourseProgress
+	for rows.Next() {
+		var d courseProgressDTO
+		err := rows.Scan(
+			&d.UserID, &d.CourseID,
+			&d.CompletedLessonsCount, &d.TotalLessonsCount,
+			&d.ProgressPercentage, &d.IsCompleted, &d.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, *d.toEntity())
+	}
+	return list, nil
+}

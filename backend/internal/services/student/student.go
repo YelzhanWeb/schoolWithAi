@@ -33,6 +33,7 @@ type ProgressRepository interface {
 	GetLessonProgress(ctx context.Context, userID, lessonID string) (*entities.LessonProgress, error)
 	CountCompletedLessonsInCourse(ctx context.Context, userID, courseID string) (int, error)
 	UpsertCourseProgress(ctx context.Context, cp *entities.CourseProgress) error
+	GetAllUserActiveCourses(ctx context.Context, userID string) ([]entities.CourseProgress, error)
 }
 
 type CourseRepository interface {
@@ -460,4 +461,31 @@ func (s *StudentService) GetGlobalLeaderboard(ctx context.Context, userID string
 	}
 
 	return entries, userRankPtr, nil
+}
+
+// В интерфейс ProgressRepository добавьте:
+// GetAllUserActiveCourses(ctx context.Context, userID string) ([]entities.CourseProgress, error)
+
+// Реализация в StudentService:
+func (s *StudentService) GetStudentActiveCourses(ctx context.Context, userID string) ([]ActiveCourseData, error) {
+	progressList, err := s.progressRepo.GetAllUserActiveCourses(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []ActiveCourseData
+	for _, prog := range progressList {
+		course, err := s.courseRepo.GetByID(ctx, prog.CourseID)
+		if err == nil {
+			result = append(result, ActiveCourseData{
+				CourseID:           course.ID,
+				Title:              course.Title,
+				CoverURL:           course.CoverImageURL,
+				ProgressPercentage: prog.ProgressPercentage,
+				TotalLessons:       prog.TotalLessonsCount,
+				CompletedLessons:   prog.CompletedLessonsCount,
+			})
+		}
+	}
+	return result, nil
 }

@@ -45,4 +45,10 @@ export const studentApi = {
     );
     return response.data.completed_lessons || [];
   },
+  getMyCourses: async (): Promise<ActiveCourse[]> => {
+    const response = await api.get<{ courses: ActiveCourse[] }>(
+      "/student/my-activity-courses"
+    );
+    return response.data.courses || [];
+  },
 };

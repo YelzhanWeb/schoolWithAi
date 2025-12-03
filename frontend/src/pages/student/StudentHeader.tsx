@@ -43,7 +43,7 @@ export const StudentHeader = () => {
           <Link to="/student/dashboard">
             <Button
               className={`flex items-center gap-2 ${
-                isActive("/student/dashboard")
+                isActive("/student/my-learning")
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-600"
               }`}

@@ -96,4 +96,18 @@ export const coursesApi = {
     const response = await api.get<{ tags: Tag[] }>("/tags");
     return response.data.tags;
   },
+
+  getFavorites: async (): Promise<Course[]> => {
+    const response = await api.get<{ courses: Course[] }>("/courses/favorites");
+    return response.data.courses || [];
+  },
+
+  toggleFavorite: async (
+    courseId: string
+  ): Promise<{ is_favorite: boolean }> => {
+    const response = await api.post<{ is_favorite: boolean }>(
+      `/courses/${courseId}/favorite`
+    );
+    return response.data;
+  },
 };

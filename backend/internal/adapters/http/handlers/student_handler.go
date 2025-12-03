@@ -201,3 +201,27 @@ func toDashboardDTO(data *student.DashboardData) *DashboardResponse {
 		ActiveCourses: courses,
 	}
 }
+
+// GetAllMyActivityCourses godoc
+// @Summary Get all active courses for student
+// @Tags student
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string][]ActiveCourseDTO
+// @Router /v1/student/my-courses [get]
+func (h *StudentHandler) GetAllMyActivityCourses(c *gin.Context) {
+	userID := c.GetString("user_id")
+
+	courses, err := h.service.GetStudentActiveCourses(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "failed to get courses"})
+		return
+	}
+
+	// Маппим в DTO
+	dtos := make([]ActiveCourseDTO, len(courses))
+	for i, c := range courses {
+		dtos[i] = ActiveCourseDTO(c)
+	}
+	c.JSON(http.StatusOK, gin.H{"courses": dtos})
+}

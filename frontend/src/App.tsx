@@ -14,6 +14,7 @@ import { StudentLayout } from "./pages/student/StudentLayout";
 import { LessonPlayer } from "./pages/student/LessonPlayer";
 import { ForgotPasswordPage } from "./pages/ForgotPassword";
 import { ResetPasswordPage } from "./pages/ResetPassword";
+import { MyLearningPage } from "./pages/student/MyLearning";
 
 function App() {
   return (
@@ -81,6 +82,14 @@ function App() {
             </ProtectedRoute>
           }
         >
+          <Route
+            path="/student/my-learning"
+            element={
+              <ProtectedRoute roles={["student", "admin"]}>
+                <MyLearningPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/student/catalog"
             element={
