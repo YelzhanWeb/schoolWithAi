@@ -40,7 +40,7 @@ export const ChangePasswordPage = () => {
     setError("");
 
     try {
-      await authApi.resetPassword({
+      await authApi.changePassword({
         email: formData.email,
         old_password: formData.oldPassword,
         new_password: formData.newPassword,

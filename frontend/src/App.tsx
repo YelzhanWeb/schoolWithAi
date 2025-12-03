@@ -12,6 +12,8 @@ import { CatalogPage } from "./pages/student/Catalog";
 import { CourseOverview } from "./pages/student/CourseOverview";
 import { StudentLayout } from "./pages/student/StudentLayout";
 import { LessonPlayer } from "./pages/student/LessonPlayer";
+import { ForgotPasswordPage } from "./pages/ForgotPassword";
+import { ResetPasswordPage } from "./pages/ResetPassword";
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* TEACHER */}
         <Route

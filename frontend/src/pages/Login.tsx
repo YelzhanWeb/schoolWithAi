@@ -84,7 +84,7 @@ export const LoginPage = () => {
 
           <div className="flex items-center justify-end">
             <Link
-              to="/change-password"
+              to="/forgot-password"
               className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
             >
               Забыли пароль?
