@@ -9,7 +9,7 @@ CREATE TABLE users (
     role user_role NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
-    avatar_url TEXT NOT NULL DEFAULT 'default_avatar.png',
+    avatar_url TEXT NOT NULL DEFAULT 'default_avatar.jpg',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

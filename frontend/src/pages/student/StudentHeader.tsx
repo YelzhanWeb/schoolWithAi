@@ -40,7 +40,7 @@ export const StudentHeader = () => {
 
         {/* Ссылки меню */}
         <nav className="hidden md:flex items-center gap-1">
-          <Link to="/student/dashboard">
+          <Link to="/student/my-learning">
             <Button
               className={`flex items-center gap-2 ${
                 isActive("/student/my-learning")

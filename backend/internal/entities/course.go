@@ -24,6 +24,7 @@ type Course struct {
 	CoverImageURL   string
 	IsPublished     bool
 	CreatedAt       time.Time
+	Author          *User
 
 	Modules []Module
 }

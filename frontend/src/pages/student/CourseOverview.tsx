@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { coursesApi } from "../../api/courses";
 import { studentApi } from "../../api/student";
@@ -16,8 +16,6 @@ import {
   Share2,
   Heart,
   FileText,
-  Video,
-  User,
 } from "lucide-react";
 
 export const CourseOverview = () => {
@@ -28,8 +26,9 @@ export const CourseOverview = () => {
   const [modules, setModules] = useState<Module[]>([]);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Локальное состояние для избранного, чтобы менять сразу при клике
+  const [isFavorite, setIsFavorite] = useState(false);
 
-  // Состояние для сворачивания/разворачивания модулей
   const [expandedModules, setExpandedModules] = useState<
     Record<string, boolean>
   >({});
@@ -47,10 +46,10 @@ export const CourseOverview = () => {
         ]);
 
         setCourse(courseData);
+        setIsFavorite(courseData.is_favorite || false); // Ставим состояние из ответа
         setModules(structureData.modules || []);
         setCompletedLessons(progressData);
 
-        // По умолчанию раскрываем первый модуль
         if (structureData.modules?.[0]) {
           setExpandedModules({ [structureData.modules[0].id]: true });
         }
@@ -71,6 +70,25 @@ export const CourseOverview = () => {
     }));
   };
 
+  // --- ЛОГИКА КНОПОК ---
+
+  const handleToggleFavorite = async () => {
+    if (!course) return;
+    try {
+      // Оптимистичное обновление интерфейса
+      setIsFavorite(!isFavorite);
+      await coursesApi.toggleFavorite(course.id);
+    } catch (error) {
+      console.error(error);
+      setIsFavorite(isFavorite); // Возвращаем как было при ошибке
+    }
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert("Ссылка на курс скопирована в буфер обмена!");
+  };
+
   const getNextLessonId = () => {
     if (!modules.length) return null;
     for (const m of modules) {
@@ -88,13 +106,15 @@ export const CourseOverview = () => {
     const nextId = getNextLessonId();
     if (nextId) {
       navigate(`/student/courses/${id}/lessons/${nextId}`);
+    } else {
+      alert("В этом курсе пока нет уроков.");
     }
   };
 
   if (isLoading)
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        Loading...
       </div>
     );
   if (!course) return <div className="p-10 text-center">Курс не найден</div>;
@@ -103,31 +123,17 @@ export const CourseOverview = () => {
     (acc, m) => acc + (m.lessons?.length || 0),
     0
   );
-  const progressPercent = Math.round(
-    (completedLessons.length / (totalLessons || 1)) * 100
-  );
-  const nextLessonId = getNextLessonId();
+  const progressPercent =
+    totalLessons > 0
+      ? Math.round((completedLessons.length / totalLessons) * 100)
+      : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      {/* --- HERO SECTION (Черный фон) --- */}
+      {/* HEADER */}
       <div className="bg-[#1C1D1F] text-white py-12">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row gap-8">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="md:w-2/3 space-y-4">
-            {/* Breadcrumbs */}
-            <div className="text-indigo-300 text-sm font-medium mb-2 flex items-center gap-2">
-              <span
-                onClick={() => navigate("/student/catalog")}
-                className="cursor-pointer hover:underline"
-              >
-                Каталог
-              </span>
-              <span>/</span>
-              <span>
-                {course.difficulty_level === 1 ? "Начинающим" : "Продвинутым"}
-              </span>
-            </div>
-
             <h1 className="text-3xl md:text-4xl font-bold leading-tight">
               {course.title}
             </h1>
@@ -135,95 +141,51 @@ export const CourseOverview = () => {
               {course.description}
             </p>
 
-            <div className="flex items-center gap-4 text-sm pt-4">
-              {course.difficulty_level && (
-                <div className="flex items-center gap-1 bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">
-                  <BarChart size={16} />
-                  <span>Уровень {course.difficulty_level}</span>
-                </div>
-              )}
+            <div className="flex items-center gap-4 text-sm pt-4 flex-wrap">
+              <div className="flex items-center gap-1 bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">
+                <BarChart size={16} />
+                <span>Уровень {course.difficulty_level}</span>
+              </div>
               <div className="flex items-center gap-1 text-gray-300">
                 <Globe size={16} />
                 <span>Русский</span>
               </div>
               <div className="flex items-center gap-1 text-gray-300">
                 <Clock size={16} />
-                <span>
-                  Последнее обновление: {new Date().toLocaleDateString()}
-                </span>
+                {/* Исправлено: берем реальную дату с бэкенда */}
+                <span>Обновлено: {course.updated_at || "Недавно"}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* --- MAIN CONTENT & SIDEBAR --- */}
       <div className="max-w-6xl mx-auto px-6 py-8 relative">
         <div className="flex flex-col md:flex-row gap-8">
-          {/* LEFT COLUMN (Content) */}
+          {/* LEFT COLUMN */}
           <div className="md:w-2/3 space-y-8">
-            {/* What you'll learn (Заглушка, т.к. в базе нет поля) */}
-            <div className="bg-white border border-gray-200 p-6 rounded-xl">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">
-                Чему вы научитесь
-              </h2>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <li className="flex gap-2 text-sm text-gray-700">
-                  <CheckCircle
-                    size={18}
-                    className="text-gray-400 flex-shrink-0"
-                  />
-                  <span>Освоите фундаментальные принципы темы</span>
-                </li>
-                <li className="flex gap-2 text-sm text-gray-700">
-                  <CheckCircle
-                    size={18}
-                    className="text-gray-400 flex-shrink-0"
-                  />
-                  <span>Научитесь применять знания на практике</span>
-                </li>
-                <li className="flex gap-2 text-sm text-gray-700">
-                  <CheckCircle
-                    size={18}
-                    className="text-gray-400 flex-shrink-0"
-                  />
-                  <span>Решите реальные задачи и кейсы</span>
-                </li>
-                <li className="flex gap-2 text-sm text-gray-700">
-                  <CheckCircle
-                    size={18}
-                    className="text-gray-400 flex-shrink-0"
-                  />
-                  <span>Получите сертификат об окончании</span>
-                </li>
-              </ul>
-            </div>
+            {/* БЛОК "Чему вы научитесь" УДАЛЕН ПО ПРОСЬБЕ */}
 
-            {/* Curriculum */}
+            {/* Программа курса */}
             <div>
               <h2 className="text-2xl font-bold mb-4 text-gray-900">
                 Программа курса
               </h2>
-              <div className="text-sm text-gray-500 mb-4">
-                {modules.length} модулей • {totalLessons} уроков
-              </div>
-
               <div className="space-y-4">
                 {modules.map((module) => (
                   <div
                     key={module.id}
                     className="bg-white border border-gray-200 rounded-xl overflow-hidden"
                   >
-                    {/* Module Header */}
                     <button
                       onClick={() => toggleModule(module.id)}
                       className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition text-left"
                     >
                       <div className="flex items-center gap-3">
                         {expandedModules[module.id] ? (
-                          <ChevronUp size={20} className="text-gray-500" />
+                          <ChevronUp size={20} />
                         ) : (
-                          <ChevronDown size={20} className="text-gray-500" />
+                          <ChevronDown size={20} />
                         )}
                         <h3 className="font-bold text-gray-800">
                           {module.title}
@@ -234,35 +196,29 @@ export const CourseOverview = () => {
                       </span>
                     </button>
 
-                    {/* Lessons List */}
                     {expandedModules[module.id] && (
                       <div className="divide-y divide-gray-100">
                         {module.lessons?.map((lesson) => {
                           const isCompleted = completedLessons.includes(
                             lesson.id
                           );
-                          const isCurrent = lesson.id === nextLessonId;
-
                           return (
                             <div
                               key={lesson.id}
+                              // Клик по уроку тоже ведет в плеер
                               onClick={() =>
                                 navigate(
                                   `/student/courses/${id}/lessons/${lesson.id}`
                                 )
                               }
-                              className={`p-4 flex items-center justify-between cursor-pointer transition hover:bg-indigo-50 ${
-                                isCurrent ? "bg-indigo-50" : "bg-white"
-                              }`}
+                              className="p-4 flex items-center justify-between cursor-pointer hover:bg-indigo-50 transition"
                             >
                               <div className="flex items-center gap-3">
                                 {isCompleted ? (
                                   <CheckCircle
-                                    className="text-green-500 fill-green-50"
+                                    className="text-green-500"
                                     size={18}
                                   />
-                                ) : lesson.video_url ? (
-                                  <Video className="text-gray-400" size={18} />
                                 ) : (
                                   <FileText
                                     className="text-gray-400"
@@ -279,20 +235,9 @@ export const CourseOverview = () => {
                                   {lesson.title}
                                 </span>
                               </div>
-
-                              {lesson.video_url && (
-                                <span className="text-xs text-gray-400">
-                                  Видео
-                                </span>
-                              )}
                             </div>
                           );
                         })}
-                        {(!module.lessons || module.lessons.length === 0) && (
-                          <div className="p-4 text-sm text-gray-400 italic text-center">
-                            Нет уроков
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
@@ -300,35 +245,44 @@ export const CourseOverview = () => {
               </div>
             </div>
 
-            {/* Instructor */}
+            {/* ПРЕПОДАВАТЕЛЬ (ИСПРАВЛЕНО) */}
             <div>
               <h2 className="text-2xl font-bold mb-4 text-gray-900">
                 Преподаватель
               </h2>
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                  <User size={32} className="text-gray-400" />
-                </div>
-                <div>
-                  <div className="font-bold text-indigo-600 text-lg">
-                    ID: {course.author_id}
+              <div className="flex items-center gap-4 bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                {course.author ? (
+                  <>
+                    <img
+                      src={
+                        course.author.avatar_url ||
+                        "https://ui-avatars.com/api/?name=" +
+                          course.author.full_name
+                      }
+                      alt={course.author.full_name}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-indigo-100"
+                    />
+                    <div>
+                      <div className="font-bold text-indigo-600 text-lg">
+                        {course.author.full_name}
+                      </div>
+                      <p className="text-gray-500 text-sm">Автор курса</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-gray-500">
+                    Информация об авторе скрыта
                   </div>
-                  <p className="text-gray-500 text-sm mb-2">Автор курса</p>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    Опытный преподаватель, создавший этот курс специально для
-                    платформы OqysAI.
-                  </p>
-                </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN (Sticky Sidebar) */}
+          {/* RIGHT SIDEBAR (Sticky) */}
           <div className="md:w-1/3 relative">
             <div className="sticky top-6 space-y-6">
-              {/* Course Card */}
               <div className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden md:-mt-48 z-10 relative">
-                {/* Video/Image Preview */}
+                {/* Картинка / Кнопка старт */}
                 <div
                   className="h-48 bg-gray-100 relative group cursor-pointer"
                   onClick={handleStart}
@@ -340,15 +294,19 @@ export const CourseOverview = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-800">
+                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
                       <PlayCircle size={48} className="text-white opacity-80" />
                     </div>
                   )}
+                  {/* Оверлей при наведении */}
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition flex items-center justify-center">
-                    <PlayCircle
-                      size={64}
-                      className="text-white drop-shadow-lg scale-95 group-hover:scale-100 transition-transform"
-                    />
+                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-full border border-white/30">
+                      <PlayCircle
+                        size={48}
+                        className="text-white drop-shadow-lg"
+                        fill="currentColor"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -396,11 +354,27 @@ export const CourseOverview = () => {
                     </div>
                   </div>
 
+                  {/* КНОПКИ ДЕЙСТВИЙ */}
                   <div className="flex gap-2 mt-6">
-                    <button className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2">
-                      <Heart size={16} /> В избранное
+                    <button
+                      onClick={handleToggleFavorite}
+                      className={`flex-1 py-2 border rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                        isFavorite
+                          ? "bg-red-50 border-red-200 text-red-600"
+                          : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Heart
+                        size={16}
+                        fill={isFavorite ? "currentColor" : "none"}
+                      />
+                      {isFavorite ? "В избранном" : "В избранное"}
                     </button>
-                    <button className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2">
+
+                    <button
+                      onClick={handleShare}
+                      className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+                    >
                       <Share2 size={16} /> Поделиться
                     </button>
                   </div>

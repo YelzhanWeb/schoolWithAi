@@ -32,6 +32,14 @@ export interface Course {
   is_published: boolean;
   tags: Tag[];
   subject: string;
+
+  author?: {
+    id: string;
+    full_name: string;
+    avatar_url: string;
+  };
+  updated_at?: string;
+  is_favorite?: boolean;
 }
 
 export interface CourseStructure {

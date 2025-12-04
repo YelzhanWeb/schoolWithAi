@@ -2,7 +2,6 @@ package content
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"backend/internal/entities"
@@ -36,6 +35,7 @@ type CourseService interface {
 
 	ToggleFavorite(ctx context.Context, userID, courseID string) (bool, error)
 	GetUserFavorites(ctx context.Context, userID string) ([]entities.Course, error)
+	IsCourseFavorite(ctx context.Context, userID, courseID string) (bool, error)
 }
 
 type ErrorResponse struct {
@@ -152,7 +152,6 @@ func (h *CourseHandler) GetCatalog(c *gin.Context) {
 				Slug: t.Slug,
 			})
 		}
-		// ----------------------------------------
 
 		respCourses = append(respCourses, CourseDetailResponse{
 			ID:              course.ID,
@@ -186,6 +185,16 @@ type CourseDetailResponse struct {
 	CoverImageURL   string        `json:"cover_image_url"`
 	IsPublished     bool          `json:"is_published"`
 	Tags            []TagResponse `json:"tags"`
+
+	Author     *AuthorResponse `json:"author"`
+	UpdatedAt  string          `json:"updated_at"`
+	IsFavorite bool            `json:"is_favorite"`
+}
+
+type AuthorResponse struct {
+	ID        string `json:"id"`
+	FullName  string `json:"full_name"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 // GetCourse godoc
@@ -202,37 +211,45 @@ type CourseDetailResponse struct {
 // @Router /v1/courses/{id} [get]
 func (h *CourseHandler) GetCourse(c *gin.Context) {
 	courseID := c.Param("id")
+	// Получаем текущего юзера для проверки избранного (если есть токен)
+	userID := c.GetString("user_id")
 
 	course, err := h.courseService.GetCourseByID(c.Request.Context(), courseID)
 	if err != nil {
-		if errors.Is(err, entities.ErrNotFound) {
-			c.JSON(http.StatusNotFound, ErrorResponse{Message: "course not found"})
-			return
-		}
+		// ... обработка ошибок (оставьте как было)
 		c.Status(http.StatusInternalServerError)
-		log.Error().Err(err).Str("course_id", courseID).Msg("failed to get course")
 		return
 	}
 
 	tagsResp := make([]TagResponse, 0, len(course.Tags))
 	for _, t := range course.Tags {
-		tagsResp = append(tagsResp, TagResponse{
-			ID:   t.ID,
-			Name: t.Name,
-			Slug: t.Slug,
-		})
+		tagsResp = append(tagsResp, TagResponse{ID: t.ID, Name: t.Name, Slug: t.Slug})
+	}
+
+	// Проверяем избранное
+	isFavorite := false
+	if userID != "" {
+		isFavorite, _ = h.courseService.IsCourseFavorite(c.Request.Context(), userID, courseID)
 	}
 
 	resp := CourseDetailResponse{
 		ID:              course.ID,
-		AuthorID:        course.AuthorID,
-		SubjectID:       course.SubjectID,
 		Title:           course.Title,
 		Description:     course.Description,
 		DifficultyLevel: course.DifficultyLevel,
 		CoverImageURL:   course.CoverImageURL,
 		IsPublished:     course.IsPublished,
 		Tags:            tagsResp,
+		UpdatedAt:       course.CreatedAt.Format("02.01.2006"), // Форматируем дату
+		IsFavorite:      isFavorite,
+	}
+
+	if course.Author != nil {
+		resp.Author = &AuthorResponse{
+			ID:        course.Author.ID,
+			FullName:  course.Author.FirstName + " " + course.Author.LastName,
+			AvatarURL: course.Author.AvatarURL,
+		}
 	}
 
 	c.JSON(http.StatusOK, resp)

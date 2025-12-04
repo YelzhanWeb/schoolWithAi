@@ -61,5 +61,5 @@ func (s *MinioStorage) UploadFile(ctx context.Context, file *multipart.FileHeade
 }
 
 func (s *MinioStorage) GetDefaultAvatarURL() string {
-	return fmt.Sprintf("%s/%s/avatars/default_avatar.png", s.publicURL, s.bucketName)
+	return fmt.Sprintf("%s/%s/avatars/default_avatar.jpg", s.publicURL, s.bucketName)
 }

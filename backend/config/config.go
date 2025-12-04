@@ -52,8 +52,8 @@ func LoadConfig() Config {
 		// SMTP
 		SMTPHost:     GetEnv("SMTP_HOST", "smtp.gmail.com"),
 		SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
-		SMTPUser:     GetEnv("SMTP_USER", "bakytkan.elzhan@gmail.com"),
-		SMTPPassword: GetEnv("SMTP_PASSWORD", "admin123"),
+		SMTPUser:     GetEnv("SMTP_USER", ""),
+		SMTPPassword: GetEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:     GetEnv("SMTP_FROM", "School With AI <no-reply@school.com>"),
 	}
 }

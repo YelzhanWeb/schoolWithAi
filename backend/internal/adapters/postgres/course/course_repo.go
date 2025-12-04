@@ -188,11 +188,22 @@ func (r *CourseRepository) getTagsForCourses(ctx context.Context, courseIDs []st
 }
 
 func (r *CourseRepository) GetByID(ctx context.Context, id string) (*entities.Course, error) {
-	query := `SELECT id, author_id, subject_id, title, description, difficulty_level, cover_image_url, is_published, created_at FROM courses WHERE id = $1`
+	query := `
+		SELECT c.id, c.author_id, c.subject_id, c.title, c.description, 
+		       c.difficulty_level, c.cover_image_url, c.is_published, c.created_at,
+		       u.first_name, u.last_name, u.avatar_url
+		FROM courses c
+		JOIN users u ON c.author_id = u.id
+		WHERE c.id = $1
+	`
 
 	var d courseDTO
+	var authorFirstName, authorLastName, authorAvatar string
+
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&d.ID, &d.AuthorID, &d.SubjectID, &d.Title, &d.Description, &d.DifficultyLevel, &d.CoverImageURL, &d.IsPublished, &d.CreatedAt,
+		&d.ID, &d.AuthorID, &d.SubjectID, &d.Title, &d.Description,
+		&d.DifficultyLevel, &d.CoverImageURL, &d.IsPublished, &d.CreatedAt,
+		&authorFirstName, &authorLastName, &authorAvatar,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -201,6 +212,13 @@ func (r *CourseRepository) GetByID(ctx context.Context, id string) (*entities.Co
 		return nil, fmt.Errorf("get course: %w", err)
 	}
 	course := d.toEntity()
+
+	course.Author = &entities.User{
+		ID:        d.AuthorID,
+		FirstName: authorFirstName,
+		LastName:  authorLastName,
+		AvatarURL: authorAvatar,
+	}
 
 	tags, err := r.getTagsByCourseID(ctx, id)
 	if err != nil {
