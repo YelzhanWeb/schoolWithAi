@@ -22,6 +22,10 @@ type StudentProfile struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	FirstName string
+	LastName  string
+	AvatarURL string
 }
 
 func NewStudentProfile(userID string, grade int) (*StudentProfile, error) {

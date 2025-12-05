@@ -21,6 +21,10 @@ type dto struct {
 
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
+
+	FirstName string
+	LastName  string
+	AvatarURL string
 }
 
 func newDTO(sp *entities.StudentProfile) dto {
@@ -54,5 +58,8 @@ func (d *dto) toEntity() *entities.StudentProfile {
 		LastActivityDate: d.LastActivityDate,
 		CreatedAt:        d.CreatedAt.UTC(),
 		UpdatedAt:        d.UpdatedAt.UTC(),
+		FirstName:        d.FirstName,
+		LastName:         d.LastName,
+		AvatarURL:        d.AvatarURL,
 	}
 }

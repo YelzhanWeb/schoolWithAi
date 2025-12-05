@@ -84,11 +84,13 @@ func (r *StudentProfileRepository) GetByUserID(ctx context.Context, userID strin
 	}
 
 	query := `
-		SELECT id, user_id, grade, xp, level, 
-		       current_league_id, weekly_xp, current_streak, max_streak, last_activity_date,
-		       created_at, updated_at
-		FROM student_profiles
-		WHERE user_id = $1
+		SELECT sp.id, sp.user_id, sp.grade, sp.xp, sp.level, 
+		       sp.current_league_id, sp.weekly_xp, sp.current_streak, sp.max_streak, sp.last_activity_date,
+		       sp.created_at, sp.updated_at,
+               u.first_name, u.last_name, u.avatar_url
+		FROM student_profiles sp
+        JOIN users u ON sp.user_id = u.id
+		WHERE sp.user_id = $1
 	`
 
 	profile, err := scan(r.pool.QueryRow(ctx, query, userID))
@@ -171,11 +173,13 @@ func (r *StudentProfileRepository) GetLeaderboard(ctx context.Context, limit int
 	}
 
 	query := `
-		SELECT id, user_id, grade, xp, level, 
-		       current_league_id, weekly_xp, current_streak, max_streak, last_activity_date,
-		       created_at, updated_at
-		FROM student_profiles
-		ORDER BY xp DESC
+		SELECT sp.id, sp.user_id, sp.grade, sp.xp, sp.level, 
+		       sp.current_league_id, sp.weekly_xp, sp.current_streak, sp.max_streak, sp.last_activity_date,
+		       sp.created_at, sp.updated_at,
+               u.first_name, u.last_name, u.avatar_url
+		FROM student_profiles sp
+        JOIN users u ON sp.user_id = u.id
+		ORDER BY sp.xp DESC
 		LIMIT $1
 	`
 
@@ -208,12 +212,14 @@ func (r *StudentProfileRepository) GetLeagueLeaderboard(
 	}
 
 	query := `
-		SELECT id, user_id, grade, xp, level, 
-		       current_league_id, weekly_xp, current_streak, max_streak, last_activity_date,
-		       created_at, updated_at
-		FROM student_profiles
-		WHERE current_league_id = $1
-		ORDER BY weekly_xp DESC
+		SELECT sp.id, sp.user_id, sp.grade, sp.xp, sp.level, 
+		       sp.current_league_id, sp.weekly_xp, sp.current_streak, sp.max_streak, sp.last_activity_date,
+		       sp.created_at, sp.updated_at,
+               u.first_name, u.last_name, u.avatar_url
+		FROM student_profiles sp
+        JOIN users u ON sp.user_id = u.id
+		WHERE sp.current_league_id = $1
+		ORDER BY sp.weekly_xp DESC
 		LIMIT $2
 	`
 
@@ -327,6 +333,9 @@ func scan(scanner rowScanner) (entities.StudentProfile, error) {
 		&d.LastActivityDate,
 		&d.CreatedAt,
 		&d.UpdatedAt,
+		&d.FirstName,
+		&d.LastName,
+		&d.AvatarURL,
 	)
 	if err != nil {
 		return entities.StudentProfile{}, err

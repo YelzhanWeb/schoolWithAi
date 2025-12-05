@@ -188,10 +188,10 @@ func (r *GamificationRepository) GetLastResetDate(ctx context.Context) (time.Tim
 func (r *GamificationRepository) SetLastResetDate(ctx context.Context, date time.Time) error {
 	val := date.Format(time.RFC3339)
 	query := `
-        INSERT INTO system_settings (key, value, updated_at) 
-        VALUES ('last_weekly_reset', $2, NOW())
-        ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()
-    `
+		INSERT INTO system_settings (key, value, updated_at) 
+		VALUES ('last_weekly_reset', $1::text, NOW())
+		ON CONFLICT (key) DO UPDATE SET value = $1::text, updated_at = NOW()
+	`
 	_, err := r.pool.Exec(ctx, query, val)
 	return err
 }

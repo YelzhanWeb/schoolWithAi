@@ -406,11 +406,14 @@ func (s *StudentService) GetWeeklyLeaderboard(ctx context.Context, userID string
 
 	for i, p := range profiles {
 		entries[i] = LeaderboardEntry{
-			Rank:     i + 1,
-			UserID:   p.UserID,
-			XP:       p.WeeklyXP,
-			Level:    p.Level,
-			LeagueID: p.CurrentLeagueID,
+			Rank:      i + 1,
+			UserID:    p.UserID,
+			XP:        p.WeeklyXP,
+			Level:     p.Level,
+			LeagueID:  p.CurrentLeagueID,
+			FirstName: p.FirstName,
+			LastName:  p.LastName,
+			AvatarURL: p.AvatarURL,
 		}
 
 		if p.UserID == userID {
@@ -443,10 +446,13 @@ func (s *StudentService) GetGlobalLeaderboard(ctx context.Context, userID string
 
 	for i, p := range profiles {
 		entries[i] = LeaderboardEntry{
-			Rank:   i + 1,
-			UserID: p.UserID,
-			XP:     p.XP,
-			Level:  p.Level,
+			Rank:      i + 1,
+			UserID:    p.UserID,
+			XP:        p.XP,
+			Level:     p.Level,
+			FirstName: p.FirstName,
+			LastName:  p.LastName,
+			AvatarURL: p.AvatarURL,
 		}
 
 		if p.UserID == userID {
