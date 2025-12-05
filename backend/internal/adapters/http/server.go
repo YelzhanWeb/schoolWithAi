@@ -142,6 +142,7 @@ func (s *Server) setupRoutes() {
 			protected.POST("/student/lessons/:id/complete", studentHandler.CompleteLesson)
 			protected.POST("/student/tests/submit", studentHandler.SubmitTest)
 			protected.GET("/student/my-activity-courses", studentHandler.GetAllMyActivityCourses)
+			protected.GET("/student/me", studentHandler.GetMe)
 
 			protected.GET("/leaderboard/weekly", leaderboarHandler.GetWeeklyLeaderboard)
 			protected.GET("/v1/leaderboard/global", leaderboarHandler.GetGlobalLeaderboard)

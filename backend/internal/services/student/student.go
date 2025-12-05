@@ -54,6 +54,10 @@ type TestRepository interface {
 	GetUserResults(ctx context.Context, userID string) ([]entities.TestResult, error)
 }
 
+type UserRepository interface {
+	GetByID(ctx context.Context, id string) (*entities.User, error)
+}
+
 type StudentService struct {
 	profileRepo      ProfileRepository
 	subjectRepo      SubjectRepository
@@ -61,6 +65,7 @@ type StudentService struct {
 	courseRepo       CourseRepository
 	gamificationRepo GamificationRepository
 	testRepo         TestRepository
+	userRepo         UserRepository
 }
 
 func NewStudentService(
@@ -70,6 +75,7 @@ func NewStudentService(
 	cRepo CourseRepository,
 	gRepo GamificationRepository,
 	tRepo TestRepository,
+	uRepo UserRepository,
 ) *StudentService {
 	return &StudentService{
 		profileRepo:      pRepo,
@@ -78,6 +84,7 @@ func NewStudentService(
 		courseRepo:       cRepo,
 		gamificationRepo: gRepo,
 		testRepo:         tRepo,
+		userRepo:         uRepo,
 	}
 }
 
@@ -488,4 +495,41 @@ func (s *StudentService) GetStudentActiveCourses(ctx context.Context, userID str
 		}
 	}
 	return result, nil
+}
+
+type StudentHeaderInfo struct {
+	FirstName     string `json:"first_name"`
+	LastName      string `json:"last_name"`
+	Email         string `json:"email"`
+	AvatarURL     string `json:"avatar_url"`
+	CurrentStreak int    `json:"current_streak"`
+	XP            int64  `json:"xp"`
+}
+
+func (s *StudentService) GetStudentHeaderInfo(ctx context.Context, userID string) (*StudentHeaderInfo, error) {
+	// 1. Получаем User (Имя, Аватар, Email)
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// 2. Получаем Profile (Стрик, XP)
+	profile, err := s.profileRepo.GetByUserID(ctx, userID)
+
+	// Если профиля еще нет (например, онбординг не пройден), возвращаем дефолтные значения
+	streak := 0
+	xp := int64(0)
+	if err == nil {
+		streak = profile.CurrentStreak
+		xp = profile.XP
+	}
+
+	return &StudentHeaderInfo{
+		FirstName:     user.FirstName,
+		LastName:      user.LastName,
+		Email:         user.Email,
+		AvatarURL:     user.AvatarURL,
+		CurrentStreak: streak,
+		XP:            xp,
+	}, nil
 }

@@ -225,3 +225,22 @@ func (h *StudentHandler) GetAllMyActivityCourses(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"courses": dtos})
 }
+
+// GetMe godoc
+// @Summary Get basic student info for header
+// @Tags student
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} student.StudentHeaderInfo
+// @Router /v1/student/me [get]
+func (h *StudentHandler) GetMe(c *gin.Context) {
+	userID := c.GetString("user_id")
+
+	info, err := h.service.GetStudentHeaderInfo(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "failed to get user info"})
+		return
+	}
+
+	c.JSON(http.StatusOK, info)
+}

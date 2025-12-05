@@ -11,6 +11,15 @@ export interface StudentProfile {
   current_streak: number;
 }
 
+export interface HeaderInfo {
+  first_name: string;
+  last_name: string;
+  email: string;
+  avatar_url: string;
+  current_streak: number;
+  xp: number;
+}
+
 export interface DashboardData {
   profile: StudentProfile;
   interests: Subject[];
@@ -32,6 +41,11 @@ export const studentApi = {
       grade,
       subject_ids: subjectIds,
     });
+  },
+
+  getMe: async (): Promise<HeaderInfo> => {
+    const response = await api.get<HeaderInfo>("/student/me");
+    return response.data;
   },
 
   getDashboard: async (): Promise<DashboardData> => {
