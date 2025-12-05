@@ -19,6 +19,9 @@ import { LessonEditor } from "../../components/course-editor/LessonEditor";
 import { TestEditor } from "../../components/course-editor/TestEditor";
 import { CourseSettings } from "../../components/course-editor/CourseSettings";
 import { EmptyState } from "../../components/course-editor/EmptyState";
+import { X } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Tab = "curriculum" | "settings";
 
@@ -44,6 +47,7 @@ export const EditCoursePage = () => {
 
   const [isSaving, setIsSaving] = useState(false);
 
+  const [showPreview, setShowPreview] = useState(false);
   useEffect(() => {
     if (id) {
       loadCourseData();
@@ -364,7 +368,78 @@ export const EditCoursePage = () => {
   };
 
   if (!course) return <div className="p-10 text-center">Загрузка курса...</div>;
+  const renderPreviewModal = () => {
+    if (!showPreview || !lessonData) return null;
 
+    // Упрощенная версия плеера для превью
+    return (
+      <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+            <h3 className="font-bold text-lg text-gray-800">
+              Предпросмотр: {lessonData.title}
+            </h3>
+            <button
+              onClick={() => setShowPreview(false)}
+              className="p-2 hover:bg-gray-200 rounded-full"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-8">
+            {/* Video */}
+            {lessonData.video_url && (
+              <div className="mb-8 aspect-video bg-black rounded-xl overflow-hidden shadow-lg mx-auto">
+                {lessonData.video_url.includes("youtu") ? (
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={lessonData.video_url
+                      .replace("watch?v=", "embed/")
+                      .replace("youtu.be/", "youtube.com/embed/")}
+                    title="Preview"
+                    frameBorder="0"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    src={lessonData.video_url}
+                    controls
+                    className="w-full h-full"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Markdown Content */}
+            <div className="prose prose-indigo max-w-none text-gray-700 leading-relaxed mb-10">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {lessonData.content_text || "*Текст урока отсутствует*"}
+              </ReactMarkdown>
+            </div>
+
+            {/* Attachments */}
+            {lessonData.file_attachment_url && (
+              <div className="p-4 border rounded-xl bg-gray-50 flex items-center gap-3">
+                <span className="text-2xl">📎</span>
+                <div>
+                  <div className="font-bold text-sm text-gray-900">
+                    Материалы урока
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Доступны для скачивания
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       <CourseHeader
@@ -374,6 +449,7 @@ export const EditCoursePage = () => {
         onTabChange={setActiveTab}
         onDelete={handleDeleteCourse}
       />
+      {renderPreviewModal()}
 
       {activeTab === "curriculum" ? (
         <div className="flex flex-1 overflow-hidden">
@@ -394,6 +470,7 @@ export const EditCoursePage = () => {
                 lesson={lessonData}
                 isSaving={isSaving}
                 onSave={handleSaveLesson}
+                onPreview={() => setShowPreview(true)}
                 onChange={setLessonData}
                 onUpload={handleUpload}
               />

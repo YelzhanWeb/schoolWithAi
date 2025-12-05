@@ -16,6 +16,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPassword";
 import { ResetPasswordPage } from "./pages/ResetPassword";
 import { MyLearningPage } from "./pages/student/MyLearning";
 import { LeaderboardPage } from "./pages/student/LeaderboardPage";
+import Profile from "./pages/student/Profile";
 
 function App() {
   return (
@@ -84,10 +85,18 @@ function App() {
           }
         >
           <Route
+            path="/student/profile"
+            element={
+              <ProtectedRoute roles={["student", "admin"]}>
+                <Profile />
+              </ProtectedRoute>
+            }
+          ></Route>
+          <Route
             path="/student/leaderboard"
             element={
               <ProtectedRoute roles={["student", "admin"]}>
-                <LeaderboardPage />{" "}
+                <LeaderboardPage />
               </ProtectedRoute>
             }
           />

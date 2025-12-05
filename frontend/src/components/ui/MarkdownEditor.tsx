@@ -25,6 +25,7 @@ import {
   InsertCodeBlock,
 } from "@mdxeditor/editor";
 import "@mdxeditor/editor/style.css";
+import { uploadApi } from "../../api/upload"; // Импортируем API
 
 interface MarkdownEditorProps {
   value: string;
@@ -37,6 +38,17 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   onChange,
   placeholder = "Начните писать контент урока...",
 }) => {
+  const handleImageUpload = async (file: File): Promise<string> => {
+    try {
+      const url = await uploadApi.uploadFile(file, "lesson");
+      return url;
+    } catch (error) {
+      console.error("Image upload failed", error);
+      alert("Ошибка загрузки изображения");
+      throw error;
+    }
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden bg-white">
       <MDXEditor
@@ -44,14 +56,16 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         onChange={onChange}
         placeholder={placeholder}
         plugins={[
-          // Основные возможности форматирования
           headingsPlugin(),
           listsPlugin(),
           quotePlugin(),
           thematicBreakPlugin(),
           linkPlugin(),
           linkDialogPlugin(),
-          imagePlugin(),
+          // Подключаем загрузчик
+          imagePlugin({
+            imageUploadHandler: handleImageUpload,
+          }),
           tablePlugin(),
           codeBlockPlugin({ defaultCodeBlockLanguage: "javascript" }),
           codeMirrorPlugin({
@@ -64,14 +78,8 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
               json: "JSON",
             },
           }),
-
-          // Горячие клавиши Markdown
           markdownShortcutPlugin(),
-
-          // Возможность переключиться на исходный код
           diffSourcePlugin({ viewMode: "rich-text" }),
-
-          // Панель инструментов
           toolbarPlugin({
             toolbarContents: () => (
               <>
@@ -82,7 +90,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 <BlockTypeSelect />
                 <Separator />
                 <CreateLink />
-                <InsertImage />
+                <InsertImage /> {/* Кнопка вставки картинки */}
                 <Separator />
                 <ListsToggle />
                 <Separator />

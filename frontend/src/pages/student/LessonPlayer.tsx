@@ -14,6 +14,7 @@ import {
 import { testsApi } from "../../api/tests";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 
 // Если у вас нет компонента для просмотра Markdown (MarkdownViewer),
 // можно использовать тот же MDXEditor в режиме readOnly или просто отображать HTML.
@@ -234,6 +235,7 @@ export const LessonPlayer = () => {
               <div className="prose prose-indigo max-w-none text-gray-700 leading-relaxed mb-10">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
                   components={{
                     // Настройка ссылок, чтобы открывались в новой вкладке (опционально)
                     a: ({ ...props }) => (
@@ -242,6 +244,12 @@ export const LessonPlayer = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
+                      />
+                    ),
+                    img: ({ ...props }) => (
+                      <img
+                        {...props}
+                        className="rounded-xl shadow-sm max-w-full h-auto my-4"
                       />
                     ),
                   }}
