@@ -345,6 +345,8 @@ func (s *StudentService) GetDashboardData(ctx context.Context, userID string) (*
 		return nil, nil
 	}
 
+	profile.CurrentStreak = calculateDisplayStreak(profile)
+
 	interests, err := s.subjectRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -507,20 +509,17 @@ type StudentHeaderInfo struct {
 }
 
 func (s *StudentService) GetStudentHeaderInfo(ctx context.Context, userID string) (*StudentHeaderInfo, error) {
-	// 1. Получаем User (Имя, Аватар, Email)
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	// 2. Получаем Profile (Стрик, XP)
 	profile, err := s.profileRepo.GetByUserID(ctx, userID)
 
-	// Если профиля еще нет (например, онбординг не пройден), возвращаем дефолтные значения
 	streak := 0
 	xp := int64(0)
 	if err == nil {
-		streak = profile.CurrentStreak
+		streak = calculateDisplayStreak(profile)
 		xp = profile.XP
 	}
 
@@ -532,4 +531,28 @@ func (s *StudentService) GetStudentHeaderInfo(ctx context.Context, userID string
 		CurrentStreak: streak,
 		XP:            xp,
 	}, nil
+}
+
+func calculateDisplayStreak(profile *entities.StudentProfile) int {
+	if profile.LastActivityDate == nil {
+		return 0
+	}
+
+	now := time.Now().UTC()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+	lastActivity := time.Date(
+		profile.LastActivityDate.Year(),
+		profile.LastActivityDate.Month(),
+		profile.LastActivityDate.Day(),
+		0, 0, 0, 0, time.UTC,
+	)
+
+	daysDiff := int(today.Sub(lastActivity).Hours() / 24)
+
+	if daysDiff > 1 {
+		return 0
+	}
+
+	return profile.CurrentStreak
 }
