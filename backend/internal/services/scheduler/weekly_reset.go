@@ -20,6 +20,8 @@ type ProfileRepository interface {
 type GamificationRepository interface {
 	SaveHistorySnapshot(ctx context.Context, h *entities.LeaderboardHistory) error
 	GetAllLeagues(ctx context.Context) ([]entities.League, error)
+	GetLastResetDate(ctx context.Context) (time.Time, error)
+	SetLastResetDate(ctx context.Context, date time.Time) error
 }
 
 type WeeklyResetService struct {
@@ -34,30 +36,67 @@ func NewWeeklyResetService(pRepo ProfileRepository, gRepo GamificationRepository
 	}
 }
 
-// Start - запускает еженедельный сброс (запускать в main.go как горутину)
 func (s *WeeklyResetService) Start(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Hour) // Проверяем каждый час
+	ticker := time.NewTicker(30 * time.Minute) // Проверяем каждые 30 мин
 	defer ticker.Stop()
 
 	log.Println("Weekly reset scheduler started")
 
+	// 1. Проверяем сразу при запуске (вдруг сервер лежал во время сброса)
+	s.CheckAndRunReset(ctx)
+
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Weekly reset scheduler stopped")
 			return
 		case <-ticker.C:
-			now := time.Now().UTC()
-			// Проверяем, наступил ли понедельник 00:00 (проверяем диапазон часа)
-			if now.Weekday() == time.Monday && now.Hour() == 0 {
-				log.Println("Starting weekly reset...")
-				s.performWeeklyReset(context.Background())
-			}
+			// 2. И периодически проверяем
+			s.CheckAndRunReset(ctx)
 		}
 	}
 }
 
-// performWeeklyReset - основная логика сброса
+func (s *WeeklyResetService) CheckAndRunReset(ctx context.Context) {
+	now := time.Now().UTC()
+
+	// Вычисляем начало текущей недели (Понедельник 00:00:00)
+	// Это наша "Целевая точка сброса"
+	currentWeekMonday := getMondayStart(now)
+
+	// Получаем дату последнего успешного сброса из БД
+	lastReset, err := s.gamificationRepo.GetLastResetDate(ctx)
+	if err != nil {
+		log.Printf("Error getting last reset date: %v", err)
+		return
+	}
+
+	// ЛОГИКА:
+	// Если последний сброс был РАНЬШЕ, чем текущий понедельник -> Пора сбрасывать!
+	if lastReset.Before(currentWeekMonday) {
+		log.Println("New week detected! Starting weekly reset...")
+
+		// Выполняем сброс
+		s.performWeeklyReset(ctx)
+
+		// Записываем в БД, что мы выполнили сброс для ЭТОГО понедельника
+		if err := s.gamificationRepo.SetLastResetDate(ctx, currentWeekMonday); err != nil {
+			log.Printf("Failed to update reset date: %v", err)
+		}
+	}
+}
+
+func getMondayStart(t time.Time) time.Time {
+	weekday := t.Weekday()
+
+	daysToSubtract := int(weekday) - int(time.Monday)
+	if daysToSubtract < 0 {
+		daysToSubtract += 7
+	}
+
+	year, month, day := t.AddDate(0, 0, -daysToSubtract).Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+}
+
 func (s *WeeklyResetService) performWeeklyReset(ctx context.Context) {
 	now := time.Now().UTC()
 	periodEnd := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
@@ -69,7 +108,6 @@ func (s *WeeklyResetService) performWeeklyReset(ctx context.Context) {
 		return
 	}
 
-	// Обрабатываем каждую лигу
 	for _, league := range leagues {
 		profiles, err := s.profileRepo.GetLeagueLeaderboard(ctx, league.ID, 100)
 		if err != nil {
@@ -82,7 +120,6 @@ func (s *WeeklyResetService) performWeeklyReset(ctx context.Context) {
 			continue
 		}
 
-		// Сохраняем снимки рейтинга
 		for rank, profile := range profiles {
 			history := &entities.LeaderboardHistory{
 				ID:          uuid.NewString(),
@@ -99,11 +136,9 @@ func (s *WeeklyResetService) performWeeklyReset(ctx context.Context) {
 			}
 		}
 
-		// Продвижение/понижение по лигам
 		s.updateLeagues(ctx, profiles, league.ID, len(leagues))
 	}
 
-	// Сбрасываем weekly_xp у всех одним запросом
 	if err := s.profileRepo.ResetAllWeeklyXP(ctx); err != nil {
 		log.Printf("Failed to reset weekly XP: %v", err)
 	}
@@ -111,19 +146,16 @@ func (s *WeeklyResetService) performWeeklyReset(ctx context.Context) {
 	log.Println("Weekly reset completed successfully!")
 }
 
-// updateLeagues - обновление лиг на основе рейтинга
 func (s *WeeklyResetService) updateLeagues(ctx context.Context, profiles []*entities.StudentProfile, currentLeagueID, totalLeagues int) {
 	if len(profiles) == 0 {
 		return
 	}
 
-	// ТОП-20% продвигаются вверх (если не максимальная лига)
 	promoteCount := len(profiles) / 5
 	if promoteCount < 1 {
 		promoteCount = 1
 	}
 
-	// Нижние 20% опускаются вниз (если не минимальная лига)
 	demoteCount := len(profiles) / 5
 	if demoteCount < 1 {
 		demoteCount = 1
@@ -133,12 +165,10 @@ func (s *WeeklyResetService) updateLeagues(ctx context.Context, profiles []*enti
 		shouldUpdate := false
 
 		if i < promoteCount && currentLeagueID < totalLeagues {
-			// Продвижение
 			profile.CurrentLeagueID++
 			shouldUpdate = true
 			log.Printf("Promoting user %s to league %d", profile.UserID, profile.CurrentLeagueID)
 		} else if i >= len(profiles)-demoteCount && currentLeagueID > 1 {
-			// Понижение
 			profile.CurrentLeagueID--
 			shouldUpdate = true
 			log.Printf("Demoting user %s to league %d", profile.UserID, profile.CurrentLeagueID)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Trophy } from "lucide-react";
 import {
   BookOpen,
   LogOut,
@@ -76,6 +77,17 @@ export const StudentHeader = () => {
               }`}
             >
               <BookOpen size={18} /> Каталог
+            </Button>
+          </Link>
+          <Link to="/student/leaderboard">
+            <Button
+              className={`flex items-center gap-2 ${
+                isActive("/student/leaderboard")
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-600"
+              }`}
+            >
+              <Trophy size={18} /> Рейтинг
             </Button>
           </Link>
         </nav>

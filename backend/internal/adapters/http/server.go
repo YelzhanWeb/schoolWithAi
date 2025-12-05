@@ -145,7 +145,7 @@ func (s *Server) setupRoutes() {
 			protected.GET("/student/me", studentHandler.GetMe)
 
 			protected.GET("/leaderboard/weekly", leaderboarHandler.GetWeeklyLeaderboard)
-			protected.GET("/v1/leaderboard/global", leaderboarHandler.GetGlobalLeaderboard)
+			protected.GET("/leaderboard/global", leaderboarHandler.GetGlobalLeaderboard)
 		}
 	}
 }

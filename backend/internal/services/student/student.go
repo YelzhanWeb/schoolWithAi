@@ -391,19 +391,16 @@ type LeaderboardEntry struct {
 }
 
 func (s *StudentService) GetWeeklyLeaderboard(ctx context.Context, userID string, limit int) ([]LeaderboardEntry, *int, error) {
-	// Получаем лигу пользователя
 	profile, err := s.profileRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get user profile: %w", err)
 	}
 
-	// Получаем топ игроков в этой лиге по weekly_xp
 	profiles, err := s.profileRepo.GetLeagueLeaderboard(ctx, profile.CurrentLeagueID, limit)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get league leaderboard: %w", err)
 	}
 
-	// Формируем список с рангами
 	entries := make([]LeaderboardEntry, len(profiles))
 	userRank := -1
 
@@ -421,7 +418,6 @@ func (s *StudentService) GetWeeklyLeaderboard(ctx context.Context, userID string
 		}
 	}
 
-	// Если пользователь не в топе, получаем его ранг отдельно
 	var userRankPtr *int
 	if userRank > 0 {
 		userRankPtr = &userRank

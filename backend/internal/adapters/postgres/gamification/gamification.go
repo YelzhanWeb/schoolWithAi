@@ -174,3 +174,24 @@ func (r *GamificationRepository) GetHistoryByPeriod(
 	}
 	return list, nil
 }
+
+func (r *GamificationRepository) GetLastResetDate(ctx context.Context) (time.Time, error) {
+	var val string
+	err := r.pool.QueryRow(ctx, "SELECT value FROM system_settings WHERE key = 'last_weekly_reset'").Scan(&val)
+	if err != nil {
+		// Если записи нет, возвращаем нулевое время (значит, сброса никогда не было)
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, val)
+}
+
+func (r *GamificationRepository) SetLastResetDate(ctx context.Context, date time.Time) error {
+	val := date.Format(time.RFC3339)
+	query := `
+        INSERT INTO system_settings (key, value, updated_at) 
+        VALUES ('last_weekly_reset', $2, NOW())
+        ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()
+    `
+	_, err := r.pool.Exec(ctx, query, val)
+	return err
+}
