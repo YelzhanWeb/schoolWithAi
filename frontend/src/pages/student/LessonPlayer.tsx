@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { coursesApi } from "../../api/courses";
 import { studentApi } from "../../api/student";
@@ -16,10 +16,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 
-// Если у вас нет компонента для просмотра Markdown (MarkdownViewer),
-// можно использовать тот же MDXEditor в режиме readOnly или просто отображать HTML.
-// Для простоты пока используем div с стилями.
-
 export const LessonPlayer = () => {
   const { courseId, lessonId } = useParams<{
     courseId: string;
@@ -27,18 +23,14 @@ export const LessonPlayer = () => {
   }>();
   const navigate = useNavigate();
 
-  // Структура для меню (боковая панель)
   const [modules, setModules] = useState<Module[]>([]);
-
-  // Полные данные текущего урока (с контентом)
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
-
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [isLoadingStructure, setIsLoadingStructure] = useState(true);
   const [isLoadingLesson, setIsLoadingLesson] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
 
-  // 1. Загружаем структуру курса (один раз при входе)
+  // 1. Загружаем структуру
   useEffect(() => {
     if (!courseId) return;
     const loadStructure = async () => {
@@ -58,14 +50,12 @@ export const LessonPlayer = () => {
     loadStructure();
   }, [courseId]);
 
-  // 2. Загружаем КОНТЕНТ конкретного урока (каждый раз при смене lessonId)
+  // 2. Загружаем конкретный урок
   useEffect(() => {
     if (!lessonId) return;
-
     const loadLessonContent = async () => {
       setIsLoadingLesson(true);
       try {
-        // ВОТ ЗДЕСЬ мы берем полные данные с контентом
         const lessonData = await coursesApi.getLesson(lessonId);
         setCurrentLesson(lessonData);
       } catch (error) {
@@ -74,7 +64,6 @@ export const LessonPlayer = () => {
         setIsLoadingLesson(false);
       }
     };
-
     loadLessonContent();
   }, [lessonId]);
 
@@ -82,25 +71,17 @@ export const LessonPlayer = () => {
     if (!currentLesson) return;
     setIsCompleting(true);
     try {
-      // 1. Отправляем запрос на завершение
       const res = await testsApi.completeLesson(currentLesson.id);
-
-      // 2. Обновляем локальный стейт (добавляем галочку)
       if (!completedLessons.includes(currentLesson.id)) {
         setCompletedLessons([...completedLessons, currentLesson.id]);
       }
-
-      // 3. Показываем XP
       if (res.xp_gained > 0) {
-        // Можно заменить на красивый тост
         alert(`Урок пройден! Вы получили +${res.xp_gained} XP 🔥`);
       }
 
-      // 4. Ищем следующий урок
+      // Ищем следующий урок
       let nextLessonId = null;
       let foundCurrent = false;
-
-      // Проходим по всем модулям и урокам по порядку
       for (const m of modules) {
         if (!m.lessons) continue;
         for (const l of m.lessons) {
@@ -127,12 +108,47 @@ export const LessonPlayer = () => {
     }
   };
 
+  // Хелпер для определения типа видео
+  const renderVideoPlayer = (url: string) => {
+    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+
+    if (isYouTube) {
+      // Превращаем обычную ссылку в embed
+      const embedUrl = url
+        .replace("watch?v=", "embed/")
+        .replace("youtu.be/", "youtube.com/embed/");
+
+      return (
+        <iframe
+          width="100%"
+          height="100%"
+          src={embedUrl}
+          title="YouTube video player"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full"
+        />
+      );
+    }
+
+    // Обычный файл (MinIO)
+    return (
+      <video
+        src={url}
+        controls
+        className="w-full h-full"
+        controlsList="nodownload" // Небольшая защита от скачивания
+      />
+    );
+  };
+
   if (isLoadingStructure)
-    return <div className="p-10 text-center">Загрузка структуры курса...</div>;
+    return <div className="p-10 text-center">Загрузка...</div>;
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
-      {/* SIDEBAR (Список уроков) */}
+      {/* SIDEBAR */}
       <aside className="w-80 border-r bg-gray-50 flex-col hidden md:flex h-full">
         <div className="p-4 border-b bg-white flex items-center gap-2 flex-shrink-0">
           <Button
@@ -144,7 +160,6 @@ export const LessonPlayer = () => {
           </Button>
           <span className="font-bold text-gray-700 truncate">Содержание</span>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           {modules.map((module) => (
             <div key={module.id}>
@@ -152,41 +167,40 @@ export const LessonPlayer = () => {
                 {module.title}
               </h3>
               <div className="space-y-1">
-                {module.lessons &&
-                  module.lessons.map((lesson) => {
-                    const isCompleted = completedLessons.includes(lesson.id);
-                    const isActive = lesson.id === lessonId; // Сравниваем с URL
-                    return (
-                      <button
-                        key={lesson.id}
-                        onClick={() =>
-                          navigate(
-                            `/student/courses/${courseId}/lessons/${lesson.id}`
-                          )
-                        }
-                        className={`w-full text-left p-3 rounded-lg text-sm flex items-start gap-3 transition-colors ${
-                          isActive
-                            ? "bg-indigo-100 text-indigo-700 font-medium"
-                            : "hover:bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <CheckCircle
-                            size={16}
-                            className="text-green-500 mt-0.5 flex-shrink-0"
-                          />
-                        ) : (
-                          <Circle
-                            size={16}
-                            className={`mt-0.5 flex-shrink-0 ${
-                              isActive ? "text-indigo-500" : "text-gray-300"
-                            }`}
-                          />
-                        )}
-                        <span className="line-clamp-2">{lesson.title}</span>
-                      </button>
-                    );
-                  })}
+                {module.lessons?.map((lesson) => {
+                  const isCompleted = completedLessons.includes(lesson.id);
+                  const isActive = lesson.id === lessonId;
+                  return (
+                    <button
+                      key={lesson.id}
+                      onClick={() =>
+                        navigate(
+                          `/student/courses/${courseId}/lessons/${lesson.id}`
+                        )
+                      }
+                      className={`w-full text-left p-3 rounded-lg text-sm flex items-start gap-3 transition-colors ${
+                        isActive
+                          ? "bg-indigo-100 text-indigo-700 font-medium"
+                          : "hover:bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle
+                          size={16}
+                          className="text-green-500 mt-0.5 flex-shrink-0"
+                        />
+                      ) : (
+                        <Circle
+                          size={16}
+                          className={`mt-0.5 flex-shrink-0 ${
+                            isActive ? "text-indigo-500" : "text-gray-300"
+                          }`}
+                        />
+                      )}
+                      <span className="line-clamp-2">{lesson.title}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -195,7 +209,6 @@ export const LessonPlayer = () => {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Header mobile */}
         <div className="md:hidden p-4 border-b flex items-center gap-2 flex-shrink-0 bg-white">
           <Button
             variant="secondary"
@@ -222,22 +235,17 @@ export const LessonPlayer = () => {
 
               {/* VIDEO PLAYER */}
               {currentLesson.video_url && (
-                <div className="mb-8 aspect-video bg-black rounded-xl overflow-hidden shadow-lg">
-                  <video
-                    src={currentLesson.video_url}
-                    controls
-                    className="w-full h-full"
-                  />
+                <div className="mb-10 aspect-video bg-black rounded-xl overflow-hidden shadow-lg border border-gray-200">
+                  {renderVideoPlayer(currentLesson.video_url)}
                 </div>
               )}
 
-              {/* CONTENT (Markdown Render) */}
+              {/* CONTENT */}
               <div className="prose prose-indigo max-w-none text-gray-700 leading-relaxed mb-10">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeRaw]}
                   components={{
-                    // Настройка ссылок, чтобы открывались в новой вкладке (опционально)
                     a: ({ ...props }) => (
                       <a
                         {...props}
@@ -249,19 +257,19 @@ export const LessonPlayer = () => {
                     img: ({ ...props }) => (
                       <img
                         {...props}
-                        className="rounded-xl shadow-sm max-w-full h-auto my-4"
+                        className="rounded-xl shadow-sm max-w-full h-auto my-6 border border-gray-100"
                       />
                     ),
                   }}
                 >
-                  {currentLesson.content_text}
+                  {currentLesson.content_text || ""}
                 </ReactMarkdown>
               </div>
 
               {/* ATTACHMENTS */}
               {currentLesson.file_attachment_url && (
-                <div className="mb-12 p-4 border rounded-xl bg-gray-50 flex items-center gap-4 hover:bg-gray-100 transition">
-                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm text-indigo-600">
+                <div className="mb-12 p-4 border rounded-xl bg-gray-50 flex items-center gap-4 hover:bg-gray-100 transition group">
+                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm text-indigo-600 group-hover:scale-110 transition-transform">
                     <FileText size={24} />
                   </div>
                   <div className="flex-1">
@@ -284,19 +292,17 @@ export const LessonPlayer = () => {
                 </div>
               )}
 
-              {/* FOOTER ACTIONS */}
+              {/* FOOTER */}
               <div className="border-t pt-8 pb-20 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="text-sm text-gray-500">
-                  Награда за урок:{" "}
+                  Награда:{" "}
                   <span className="font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-full ml-1">
                     +{currentLesson.xp_reward} XP
                   </span>
                 </div>
-
                 <Button
                   onClick={handleComplete}
                   isLoading={isCompleting}
-                  // Если уже пройден, кнопка всё равно активна, чтобы перейти дальше, но меняется текст/стиль
                   variant={
                     completedLessons.includes(currentLesson.id)
                       ? "outline"

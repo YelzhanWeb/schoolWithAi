@@ -3,7 +3,7 @@ import { Button } from "../ui/Button";
 import type { Lesson } from "../../types/course";
 import { Input } from "../ui/Input";
 import { MarkdownEditor } from "../ui/MarkdownEditor";
-import { Eye, Video, Youtube, Upload, FileText } from "lucide-react";
+import { Eye, Video, Youtube, Upload, FileText, Trash2 } from "lucide-react";
 
 interface LessonEditorProps {
   lesson: Lesson;
@@ -25,11 +25,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
   onChange,
   onUpload,
 }) => {
-  // Instead of useEffect, we use a local state that defaults based on the lesson prop,
-  // but we update it ONLY when the user clicks the buttons.
-  // Ideally, we infer the "initial" mode from the data.
-
-  // Helper to determine type based on URL
+  // Определяем начальное состояние типа видео
   const getVideoTypeFromUrl = (url?: string) => {
     if (url && (url.includes("youtube.com") || url.includes("youtu.be"))) {
       return "youtube";
@@ -41,11 +37,17 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
     getVideoTypeFromUrl(lesson.video_url)
   );
 
-  // Optional: If lesson changes externally (e.g. switching between lessons), update the view
-  // This is safe because it only runs when lesson.id changes.
+  // Синхронизация при смене урока
   React.useEffect(() => {
     setVideoType(getVideoTypeFromUrl(lesson.video_url));
-  }, [lesson.id, lesson.video_url]);
+  }, [lesson.id]);
+
+  // Функция удаления видео
+  const handleRemoveVideo = () => {
+    if (confirm("Вы уверены, что хотите удалить видео из урока?")) {
+      onChange({ ...lesson, video_url: "" });
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-8 space-y-8">
@@ -94,37 +96,50 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
             <Video size={18} /> Видеоматериал
           </label>
 
-          {/* Переключатель источника */}
-          <div className="flex bg-white rounded-lg p-1 border shadow-sm">
-            <button
-              onClick={() => setVideoType("upload")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition flex items-center gap-2 ${
-                videoType === "upload"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <Upload size={14} /> Файл
-            </button>
-            <button
-              onClick={() => setVideoType("youtube")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition flex items-center gap-2 ${
-                videoType === "youtube"
-                  ? "bg-red-100 text-red-700"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <Youtube size={14} /> YouTube
-            </button>
+          <div className="flex items-center gap-3">
+            {/* Кнопка удаления (показываем только если есть видео) */}
+            {lesson.video_url && (
+              <button
+                onClick={handleRemoveVideo}
+                className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-md transition text-xs font-medium flex items-center gap-1"
+                title="Удалить текущее видео"
+              >
+                <Trash2 size={14} /> Удалить видео
+              </button>
+            )}
+
+            {/* Переключатель */}
+            <div className="flex bg-white rounded-lg p-1 border shadow-sm">
+              <button
+                onClick={() => setVideoType("upload")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition flex items-center gap-2 ${
+                  videoType === "upload"
+                    ? "bg-indigo-100 text-indigo-700"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Upload size={14} /> Файл
+              </button>
+              <button
+                onClick={() => setVideoType("youtube")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition flex items-center gap-2 ${
+                  videoType === "youtube"
+                    ? "bg-red-100 text-red-700"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Youtube size={14} /> YouTube
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Контент видео блока */}
         <div className="space-y-4">
           {videoType === "upload" ? (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-white hover:bg-gray-50 transition">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-white hover:bg-gray-50 transition relative">
               {lesson.video_url && !lesson.video_url.includes("youtube") ? (
-                <div className="mb-4">
+                <div className="mb-4 relative">
                   <video
                     src={lesson.video_url}
                     controls
@@ -133,27 +148,32 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
                   <p className="text-xs text-green-600 mt-2">Файл загружен</p>
                 </div>
               ) : null}
-              <input
-                type="file"
-                accept="video/*"
-                onChange={(e) => onUpload(e, "video_url")}
-                className="block w-full text-sm text-gray-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-full file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-indigo-50 file:text-indigo-700
-                        hover:file:bg-indigo-100"
-              />
-              <p className="text-xs text-gray-400 mt-2">
-                MP4, WebM (макс. 100МБ)
-              </p>
+
+              <div className="mt-2">
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => onUpload(e, "video_url")}
+                  className="block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-indigo-50 file:text-indigo-700
+                            hover:file:bg-indigo-100"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  MP4, WebM (макс. 100МБ)
+                </p>
+              </div>
             </div>
           ) : (
             <div>
               <Input
                 placeholder="Вставьте ссылку на YouTube (например, https://youtu.be/...)"
                 value={
-                  lesson.video_url && lesson.video_url.includes("http")
+                  lesson.video_url &&
+                  (lesson.video_url.includes("youtube") ||
+                    lesson.video_url.includes("youtu.be"))
                     ? lesson.video_url
                     : ""
                 }
@@ -164,7 +184,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
               {lesson.video_url &&
                 (lesson.video_url.includes("youtube") ||
                   lesson.video_url.includes("youtu.be")) && (
-                  <div className="mt-4 aspect-video bg-black rounded-lg overflow-hidden">
+                  <div className="mt-4 aspect-video bg-black rounded-lg overflow-hidden relative">
                     <iframe
                       width="100%"
                       height="100%"
@@ -225,6 +245,16 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
               className="hidden"
             />
           </label>
+          {/* Удаление файла */}
+          {lesson.file_attachment_url && (
+            <button
+              onClick={() => onChange({ ...lesson, file_attachment_url: "" })}
+              className="text-red-500 hover:bg-red-50 p-2 rounded transition"
+              title="Удалить файл"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
     </div>
