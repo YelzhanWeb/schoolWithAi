@@ -1,12 +1,13 @@
 import api from "./axios";
 
 export interface Answer {
-  id?: string;
+  id: string;
   text: string;
   is_correct: boolean;
 }
 
 export interface Question {
+  id: string;
   text: string;
   question_type: string; // "single_choice"
   answers: Answer[];

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { coursesApi } from "../../api/courses";
 import { studentApi } from "../../api/student";
@@ -202,6 +202,19 @@ export const LessonPlayer = () => {
                   );
                 })}
               </div>
+              <button
+                onClick={() =>
+                  navigate(
+                    `/student/courses/${courseId}/modules/${module.id}/test`
+                  )
+                }
+                className="w-full text-left p-3 mt-1 rounded-lg text-sm flex items-center gap-3 hover:bg-purple-50 text-purple-700 font-medium transition-colors"
+              >
+                <div className="w-4 h-4 rounded-full border-2 border-purple-400 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full opacity-0"></div>
+                </div>
+                <span>Пройти тест модуля</span>
+              </button>
             </div>
           ))}
         </div>

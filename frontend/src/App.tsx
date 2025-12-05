@@ -17,6 +17,7 @@ import { ResetPasswordPage } from "./pages/ResetPassword";
 import { MyLearningPage } from "./pages/student/MyLearning";
 import { LeaderboardPage } from "./pages/student/LeaderboardPage";
 import Profile from "./pages/student/Profile";
+import { TestPlayer } from "./pages/student/TestPlayer";
 
 function App() {
   return (
@@ -84,6 +85,10 @@ function App() {
             </ProtectedRoute>
           }
         >
+          <Route
+            path="/student/courses/:courseId/modules/:moduleId/test"
+            element={<TestPlayer />}
+          />
           <Route
             path="/student/profile"
             element={
