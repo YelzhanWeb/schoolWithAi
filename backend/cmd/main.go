@@ -12,6 +12,7 @@ import (
 	"backend/config"
 	"backend/internal/adapters/email"
 	"backend/internal/adapters/http"
+	mlservice "backend/internal/adapters/ml_service"
 	"backend/internal/adapters/storage"
 	"backend/internal/services/auth"
 	"backend/internal/services/scheduler"
@@ -127,9 +128,11 @@ func main() {
 		log.Fatalf("Failed to init MinIO: %v", err)
 	}
 
+	mlClient := mlservice.NewClient(cfg.MLServiceURL)
+
 	authService := auth.NewAuthService(userRepo, jwtManager, minioStorage, emailService)
 	subjService := subjectService.NewSubjectService(subjectRepo)
-	cService := courseService.NewCourseService(courseRepo)
+	cService := courseService.NewCourseService(courseRepo, mlClient)
 	testService := testService.NewTestService(testRepo)
 	studentService := student.NewStudentService(
 		profileRepo,

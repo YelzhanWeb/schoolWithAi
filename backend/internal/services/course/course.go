@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"backend/internal/entities"
+
+	"github.com/rs/zerolog/log"
 )
 
 type CourseRepository interface {
@@ -31,14 +33,24 @@ type CourseRepository interface {
 	ToggleFavorite(ctx context.Context, userID, courseID string) (bool, error)
 	GetUserFavorites(ctx context.Context, userID string) ([]entities.Course, error)
 	IsFavorite(ctx context.Context, userID, courseID string) (bool, error)
+
+	GetCoursesByIDs(ctx context.Context, ids []string) ([]entities.Course, error)
+}
+
+type MLClient interface {
+	GetRecommendedCourseIDs(userID string) ([]string, error)
 }
 
 type CourseService struct {
-	repo CourseRepository
+	repo     CourseRepository
+	mlClient MLClient
 }
 
-func NewCourseService(repo CourseRepository) *CourseService {
-	return &CourseService{repo: repo}
+func NewCourseService(repo CourseRepository, mlClient MLClient) *CourseService {
+	return &CourseService{
+		repo:     repo,
+		mlClient: mlClient,
+	}
 }
 
 func (s *CourseService) CreateCourse(ctx context.Context, course *entities.Course) error {
@@ -210,4 +222,26 @@ func (s *CourseService) GetUserFavorites(ctx context.Context, userID string) ([]
 
 func (s *CourseService) IsCourseFavorite(ctx context.Context, userID, courseID string) (bool, error) {
 	return s.repo.IsFavorite(ctx, userID, courseID)
+}
+
+func (s *CourseService) GetRecommendations(ctx context.Context, userID string) ([]entities.Course, error) {
+	courseIDs, err := s.mlClient.GetRecommendedCourseIDs(userID)
+	if err != nil {
+		log.Warn().Err(err).Msg("Warning: ML service failed")
+		return []entities.Course{}, nil
+	}
+
+	if len(courseIDs) == 0 {
+		return []entities.Course{}, nil
+	}
+
+	courses, err := s.repo.GetCoursesByIDs(ctx, courseIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Опционально: можно восстановить порядок курсов, как вернул ML (база может вернуть вразнобой)
+	// Но для начала и так сойдет.
+
+	return courses, nil
 }

@@ -36,6 +36,8 @@ type CourseService interface {
 	ToggleFavorite(ctx context.Context, userID, courseID string) (bool, error)
 	GetUserFavorites(ctx context.Context, userID string) ([]entities.Course, error)
 	IsCourseFavorite(ctx context.Context, userID, courseID string) (bool, error)
+
+	GetRecommendations(ctx context.Context, userID string) ([]entities.Course, error)
 }
 
 type ErrorResponse struct {

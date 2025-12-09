@@ -30,6 +30,8 @@ type Config struct {
 	SMTPUser     string
 	SMTPPassword string
 	SMTPFrom     string
+
+	MLServiceURL string
 }
 
 func LoadConfig() Config {
@@ -55,6 +57,7 @@ func LoadConfig() Config {
 		SMTPUser:     GetEnv("SMTP_USER", ""),
 		SMTPPassword: GetEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:     GetEnv("SMTP_FROM", "School With AI <no-reply@school.com>"),
+		MLServiceURL: GetEnv("ML_SERVICE_URL", "http://0.0.0.0:5000"),
 	}
 }
 

@@ -110,4 +110,8 @@ export const coursesApi = {
     );
     return response.data;
   },
+  getRecommendations: async (): Promise<Course[]> => {
+    const { data } = await api.get<Course[]>("/courses/recommendations");
+    return data;
+  },
 };

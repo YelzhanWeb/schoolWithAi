@@ -697,7 +697,6 @@ func (r *CourseRepository) GetUserFavorites(ctx context.Context, userID string) 
 	return courses, nil
 }
 
-// IsFavorite: Check favorite or not for button
 func (r *CourseRepository) IsFavorite(ctx context.Context, userID, courseID string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM course_favorites WHERE user_id = $1 AND course_id = $2)`
 	var exists bool
@@ -708,21 +707,31 @@ func (r *CourseRepository) IsFavorite(ctx context.Context, userID, courseID stri
 	return exists, nil
 }
 
-// func (r *CourseRepository) ReorderLessons(ctx context.Context, updates map[string]int) error {
-// 	tx, err := r.pool.Begin(ctx)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer tx.Rollback(ctx)
+func (r *CourseRepository) GetCoursesByIDs(ctx context.Context, ids []string) ([]entities.Course, error) {
+	if len(ids) == 0 {
+		return []entities.Course{}, nil
+	}
 
-// 	query := `UPDATE lessons SET order_index = $2 WHERE id = $1`
+	query := `
+        SELECT id, title, description, difficulty_level, subject_id, author_id, created_at, is_published, cover_image_url
+        FROM courses
+        WHERE id = ANY($1) AND is_published = TRUE
+    `
 
-// 	for id, newOrder := range updates {
-// 		_, err := tx.Exec(ctx, query, id, newOrder)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
+	rows, err := r.pool.Query(ctx, query, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-// 	return tx.Commit(ctx)
-// }
+	var courses []entities.Course
+	for rows.Next() {
+		var c entities.Course
+		if err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.DifficultyLevel, &c.SubjectID, &c.AuthorID, &c.CreatedAt, &c.IsPublished, &c.CoverImageURL); err != nil {
+			return nil, err
+		}
+		courses = append(courses, c)
+	}
+
+	return courses, nil
+}

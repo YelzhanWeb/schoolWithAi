@@ -146,6 +146,8 @@ func (s *Server) setupRoutes() {
 
 			protected.GET("/leaderboard/weekly", leaderboarHandler.GetWeeklyLeaderboard)
 			protected.GET("/leaderboard/global", leaderboarHandler.GetGlobalLeaderboard)
+
+			protected.GET("/courses/recommendations", courseHandler.GetRecommendations)
 		}
 	}
 }
