@@ -110,11 +110,13 @@ func (h *TestHandler) CreateTest(c *gin.Context) {
 }
 
 type AnswerResponse struct {
+	ID        string `json:"id"`
 	Text      string `json:"text"`
 	IsCorrect bool   `json:"is_correct"`
 }
 
 type QuestionResponse struct {
+	ID           string           `json:"id"`
 	Text         string           `json:"text"`
 	QuestionType string           `json:"question_type"`
 	Answers      []AnswerResponse `json:"answers"`
@@ -178,16 +180,10 @@ func (h *TestHandler) GetTest(c *gin.Context) {
 // @Failure 500
 // @Router /v1/modules/{id}/test-with-answers [get]
 func (h *TestHandler) GetTestWithAnswer(c *gin.Context) {
-	role, exists := c.Get("role")
+	_, exists := c.Get("role")
 	if !exists {
 		log.Error().Msg("user unauthorized")
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Message: "unauthorized"})
-		return
-	}
-
-	if role != "teacher" && role != "admin" {
-		log.Error().Msg("only teachers can create courses")
-		c.JSON(http.StatusForbidden, ErrorResponse{Message: "only teachers can create courses"})
 		return
 	}
 
@@ -216,6 +212,7 @@ func mapTestToResponse(test *entities.Test, withCorrectAnswer bool) TestResponse
 
 	for _, q := range test.Questions {
 		qResp := QuestionResponse{
+			ID:           q.ID,
 			Text:         q.Text,
 			QuestionType: q.QuestionType,
 		}
@@ -223,12 +220,14 @@ func mapTestToResponse(test *entities.Test, withCorrectAnswer bool) TestResponse
 		for _, a := range q.Answers {
 			if withCorrectAnswer {
 				qResp.Answers = append(qResp.Answers, AnswerResponse{
+					ID:        a.ID,
 					Text:      a.Text,
 					IsCorrect: a.IsCorrect,
 				})
 				continue
 			}
 			qResp.Answers = append(qResp.Answers, AnswerResponse{
+				ID:   a.ID,
 				Text: a.Text,
 			})
 		}

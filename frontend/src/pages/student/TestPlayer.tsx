@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { testsApi, type Test, type StudentAnswer } from "../../api/tests";
 import { Button } from "../../components/ui/Button";
@@ -22,7 +22,7 @@ export const TestPlayer = () => {
     if (!moduleId) return;
     const loadTest = async () => {
       try {
-        const data = await testsApi.getByModuleId(moduleId);
+        const data = await testsApi.getByModuleIdWithAnswers(moduleId);
         setTest(data);
       } catch (error) {
         console.error("Test not found", error);

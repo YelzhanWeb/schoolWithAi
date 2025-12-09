@@ -132,7 +132,7 @@ func (s *Server) setupRoutes() {
 
 			protected.POST("/tests", testHandler.CreateTest)
 			protected.GET("/modules/:id/test", testHandler.GetTest)
-			protected.GET("/modules/{id}/test-with-answers", testHandler.GetTestWithAnswer)
+			protected.GET("/modules/:id/test-with-answers", testHandler.GetTestWithAnswer)
 			protected.PUT("/tests/:id", testHandler.UpdateTest)
 			protected.DELETE("/tests/:id", testHandler.DeleteTest)
 

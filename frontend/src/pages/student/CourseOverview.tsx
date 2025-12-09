@@ -17,6 +17,7 @@ import {
   Heart,
   FileText,
 } from "lucide-react";
+import { testsApi } from "../../api/tests";
 
 export const CourseOverview = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,8 +27,10 @@ export const CourseOverview = () => {
   const [modules, setModules] = useState<Module[]>([]);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // Локальное состояние для избранного, чтобы менять сразу при клике
   const [isFavorite, setIsFavorite] = useState(false);
+  const [modulesWithTests, setModulesWithTests] = useState<Set<string>>(
+    new Set()
+  );
 
   const [expandedModules, setExpandedModules] = useState<
     Record<string, boolean>
@@ -49,6 +52,22 @@ export const CourseOverview = () => {
         setIsFavorite(courseData.is_favorite || false); // Ставим состояние из ответа
         setModules(structureData.modules || []);
         setCompletedLessons(progressData);
+
+        const testChecks = await Promise.all(
+          (structureData.modules || []).map(async (module) => {
+            try {
+              await testsApi.getByModuleId(module.id);
+              return module.id;
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        const modulesWithTestsSet = new Set(
+          testChecks.filter((id): id is string => id !== null)
+        );
+        setModulesWithTests(modulesWithTestsSet);
 
         if (structureData.modules?.[0]) {
           setExpandedModules({ [structureData.modules[0].id]: true });
@@ -238,6 +257,24 @@ export const CourseOverview = () => {
                             </div>
                           );
                         })}
+                        {/* ПОКАЗЫВАЕМ КНОПКУ ТЕСТА, ТОЛЬКО ЕСЛИ ОН ЕСТЬ */}
+                        {modulesWithTests.has(module.id) && (
+                          <div
+                            onClick={() =>
+                              navigate(
+                                `/student/courses/${id}/modules/${module.id}/test`
+                              )
+                            }
+                            className="p-4 flex items-center gap-3 cursor-pointer hover:bg-purple-50 transition border-t-2 border-purple-100"
+                          >
+                            <div className="w-5 h-5 rounded-full border-2 border-purple-500 flex items-center justify-center">
+                              <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"></div>
+                            </div>
+                            <span className="text-sm font-medium text-purple-700">
+                              Итоговый тест модуля
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

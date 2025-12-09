@@ -7,33 +7,6 @@ CREATE TABLE subjects (
     name_kz VARCHAR(100) NOT NULL
 );
 
-INSERT INTO
-    subjects (id, slug, name_ru, name_kz)
-VALUES (
-        'math-12345',
-        'math',
-        'Математика',
-        'Математика'
-    ),
-    (
-        'kaz_lang-12345',
-        'kaz_lang',
-        'Казахский язык',
-        'Қазақ тілі'
-    ),
-    (
-        'history_kz-12345',
-        'history_kz',
-        'История Казахстана',
-        'Қазақстан тарихы'
-    ),
-    (
-        'physics-12345',
-        'physics',
-        'Физика',
-        'Физика'
-    );
-
 CREATE TABLE student_profiles (
     id TEXT PRIMARY KEY,
     user_id TEXT UNIQUE REFERENCES users (id) ON DELETE CASCADE,

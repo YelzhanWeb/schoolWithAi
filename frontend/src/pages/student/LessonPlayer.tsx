@@ -76,10 +76,8 @@ export const LessonPlayer = () => {
         setCompletedLessons([...completedLessons, currentLesson.id]);
       }
       if (res.xp_gained > 0) {
-        alert(`Урок пройден! Вы получили +${res.xp_gained} XP 🔥`);
+        console.log(`+${res.xp_gained} XP earned`);
       }
-
-      // Ищем следующий урок
       let nextLessonId = null;
       let foundCurrent = false;
       for (const m of modules) {
@@ -306,13 +304,7 @@ export const LessonPlayer = () => {
               )}
 
               {/* FOOTER */}
-              <div className="border-t pt-8 pb-20 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-sm text-gray-500">
-                  Награда:{" "}
-                  <span className="font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-full ml-1">
-                    +{currentLesson.xp_reward} XP
-                  </span>
-                </div>
+              <div className="border-t pt-8 pb-20 flex justify-end">
                 <Button
                   onClick={handleComplete}
                   isLoading={isCompleting}

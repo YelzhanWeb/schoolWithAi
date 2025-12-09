@@ -22,12 +22,6 @@ CREATE TABLE tags (
     slug VARCHAR(50) UNIQUE NOT NULL --'python' for search
 );
 
-INSERT INTO
-    tags (name, slug)
-VALUES ('Python', 'python'),
-    ('Алгебра', 'algebra'),
-    ('Механика', 'mechanics');
-
 CREATE TABLE course_tags (
     course_id TEXT REFERENCES courses (id) ON DELETE CASCADE,
     tag_id INTEGER REFERENCES tags (id) ON DELETE CASCADE,

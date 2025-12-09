@@ -40,11 +40,13 @@ export interface StudentAnswer {
 }
 
 export const testsApi = {
-  getByModuleId: async (moduleId: string): Promise<Test> => {
-    const response = await api.get<Test>(`/modules/${moduleId}/test`);
+  getByModuleIdWithAnswers: async (moduleId: string): Promise<Test> => {
+    const response = await api.get<Test>(
+      `/modules/${moduleId}/test-with-answers`
+    );
     return response.data;
   },
-  getByModuleIdWithAnswers: async (moduleId: string): Promise<Test> => {
+  getByModuleId: async (moduleId: string): Promise<Test> => {
     const response = await api.get<Test>(`/modules/${moduleId}/test`);
     return response.data;
   },
