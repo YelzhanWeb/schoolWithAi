@@ -29,6 +29,9 @@ export const LessonPlayer = () => {
   const [isLoadingStructure, setIsLoadingStructure] = useState(true);
   const [isLoadingLesson, setIsLoadingLesson] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [modulesWithTests, setModulesWithTests] = useState<Set<string>>(
+    new Set()
+  );
 
   // 1. Загружаем структуру
   useEffect(() => {
@@ -39,6 +42,22 @@ export const LessonPlayer = () => {
           coursesApi.getStructure(courseId),
           studentApi.getCourseProgress(courseId),
         ]);
+
+        const testChecks = await Promise.all(
+          (structData.modules || []).map(async (module) => {
+            try {
+              await testsApi.getByModuleId(module.id);
+              return module.id;
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        setModulesWithTests(
+          new Set(testChecks.filter((id): id is string => id !== null))
+        );
+
         setModules(structData.modules || []);
         setCompletedLessons(progressData);
       } catch (e) {
@@ -200,19 +219,21 @@ export const LessonPlayer = () => {
                   );
                 })}
               </div>
-              <button
-                onClick={() =>
-                  navigate(
-                    `/student/courses/${courseId}/modules/${module.id}/test`
-                  )
-                }
-                className="w-full text-left p-3 mt-1 rounded-lg text-sm flex items-center gap-3 hover:bg-purple-50 text-purple-700 font-medium transition-colors"
-              >
-                <div className="w-4 h-4 rounded-full border-2 border-purple-400 flex items-center justify-center">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full opacity-0"></div>
-                </div>
-                <span>Пройти тест модуля</span>
-              </button>
+              {modulesWithTests.has(module.id) && (
+                <button
+                  onClick={() =>
+                    navigate(
+                      `/student/courses/${courseId}/modules/${module.id}/test`
+                    )
+                  }
+                  className="w-full text-left p-3 mt-1 rounded-lg text-sm flex items-center gap-3 hover:bg-purple-50 text-purple-700 font-medium transition-colors"
+                >
+                  <div className="w-4 h-4 rounded-full border-2 border-purple-400 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                  </div>
+                  <span>Пройти тест</span>
+                </button>
+              )}
             </div>
           ))}
         </div>

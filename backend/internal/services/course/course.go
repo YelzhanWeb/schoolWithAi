@@ -235,13 +235,12 @@ func (s *CourseService) GetRecommendations(ctx context.Context, userID string) (
 		return []entities.Course{}, nil
 	}
 
+	fmt.Println(courseIDs)
 	courses, err := s.repo.GetCoursesByIDs(ctx, courseIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	// Опционально: можно восстановить порядок курсов, как вернул ML (база может вернуть вразнобой)
-	// Но для начала и так сойдет.
-
+	fmt.Println(courses)
 	return courses, nil
 }

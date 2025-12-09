@@ -2,6 +2,7 @@ package course
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -707,13 +708,18 @@ func (r *CourseRepository) IsFavorite(ctx context.Context, userID, courseID stri
 	return exists, nil
 }
 
-func (r *CourseRepository) GetCoursesByIDs(ctx context.Context, ids []string) ([]entities.Course, error) {
+func (r *CourseRepository) GetCoursesByIDs(
+	ctx context.Context,
+	ids []string,
+) ([]entities.Course, error) {
 	if len(ids) == 0 {
 		return []entities.Course{}, nil
 	}
 
 	query := `
-        SELECT id, title, description, difficulty_level, subject_id, author_id, created_at, is_published, cover_image_url
+        SELECT id, title, description, difficulty_level,
+               subject_id, author_id, created_at,
+               is_published, cover_image_url
         FROM courses
         WHERE id = ANY($1) AND is_published = TRUE
     `
@@ -725,11 +731,31 @@ func (r *CourseRepository) GetCoursesByIDs(ctx context.Context, ids []string) ([
 	defer rows.Close()
 
 	var courses []entities.Course
+
 	for rows.Next() {
 		var c entities.Course
-		if err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.DifficultyLevel, &c.SubjectID, &c.AuthorID, &c.CreatedAt, &c.IsPublished, &c.CoverImageURL); err != nil {
+		var coverImage sql.NullString
+
+		if err := rows.Scan(
+			&c.ID,
+			&c.Title,
+			&c.Description,
+			&c.DifficultyLevel,
+			&c.SubjectID,
+			&c.AuthorID,
+			&c.CreatedAt,
+			&c.IsPublished,
+			&coverImage,
+		); err != nil {
 			return nil, err
 		}
+
+		if coverImage.Valid {
+			c.CoverImageURL = coverImage.String
+		} else {
+			c.CoverImageURL = ""
+		}
+
 		courses = append(courses, c)
 	}
 
