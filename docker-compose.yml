@@ -1,34 +1,32 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15-alpine
     container_name: education_db
     restart: unless-stopped
-    env_file:
-      - .env
+    env_file: .env
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d education_platform"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-education_platform}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - education_network
-  
 
   migrations:
     image: gomicro/goose:latest
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env
+    env_file: .env
     volumes:
       - ./db/migrations:/migrations
     command: ["goose", "-dir", "/migrations", "up"]
-    restart: on-failure
     networks:
       - education_network
 
@@ -41,38 +39,34 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SERVER_URL: "https://s3.furia.sbs"
+      MINIO_BROWSER_REDIRECT_URL: "https://minio-admin.furia.sbs"
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
     networks:
       - education_network
-  
+
   minio-createbuckets:
     image: minio/mc
     depends_on:
       minio:
         condition: service_started
-    env_file:
-      - .env
+    env_file: .env
     volumes:
       - ./assets:/assets 
     entrypoint: >
       /bin/sh -c "
-      echo '⏳ Waiting for MinIO to be ready...';
-      
+      echo '⏳ Waiting for MinIO...';
       until /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; do
-        echo '... MinIO is not ready yet, sleeping 2s ...';
         sleep 2;
       done;
-
-      echo '✅ MinIO is ready! Creating resources...';
-
+      echo '✅ MinIO ready!';
       /usr/bin/mc mb myminio/${MINIO_BUCKET_NAME} --ignore-existing;
-      
       /usr/bin/mc anonymous set download myminio/${MINIO_BUCKET_NAME};
-
-      /usr/bin/mc cp /assets/default_avatar.jpg myminio/${MINIO_BUCKET_NAME}/avatars/default_avatar.jpg;
-
+      
+      # Исправление: добавлена точка с запятой после fi
+      /usr/bin/mc cp /assets/default_avatar.jpg myminio/${MINIO_BUCKET_NAME}/avatars/default_avatar.jpg; 
       /usr/bin/mc cp /assets/bronze_league.png myminio/${MINIO_BUCKET_NAME}/leagues/bronze_league.png;
       /usr/bin/mc cp /assets/silver_league.png myminio/${MINIO_BUCKET_NAME}/leagues/silver_league.png;
       /usr/bin/mc cp /assets/gold_league.png myminio/${MINIO_BUCKET_NAME}/leagues/gold_league.png;
@@ -81,39 +75,15 @@ services:
       /usr/bin/mc cp /assets/diamond_league.png myminio/${MINIO_BUCKET_NAME}/leagues/diamond_league.png;
       /usr/bin/mc cp /assets/emerald_league.png myminio/${MINIO_BUCKET_NAME}/leagues/emerald_league.png;
       /usr/bin/mc cp /assets/amethyst_league.png myminio/${MINIO_BUCKET_NAME}/leagues/amethyst_league.png;
-  
-      echo '🎉 Setup complete!';
+      echo '🎉 All assets uploaded!';
       exit 0;
       "
     networks:
       - education_network
-  # ml-service:
-  #   build:
-  #     context: ./ml-service
-  #     dockerfile: Dockerfile
-  #   container_name: education_ml
-  #   restart: unless-stopped
-  #   environment:
-  #     DB_HOST: postgres
-  #     DB_PORT: 5432
-  #     DB_NAME: education_platform
-  #     DB_USER: postgres
-  #     DB_PASSWORD: postgres
-  #   ports:
-  #     - "5000:5000"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./ml-service/app:/app/app
-  #   networks:
-  #     - education_network
 
 volumes:
   postgres_data:
-    driver: local
   minio_data:
-    driver: local
 
 networks:
   education_network:

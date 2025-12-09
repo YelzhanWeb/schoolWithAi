@@ -23,4 +23,4 @@ fmt:
 
 .PHONY: run_frontend
 run_frontend:
-	cd frontend && npm run dev
+	cd frontend && npm run dev -- --host

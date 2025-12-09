@@ -62,3 +62,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+claudflared.deb
+cloudflared.deb
